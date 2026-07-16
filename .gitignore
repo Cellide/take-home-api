@@ -41,6 +41,7 @@ lerna-debug.log*
 .env
 
 ~*.xlsx
+.~lock.*
 
 # Ignore some Claude files
 .claude/*
