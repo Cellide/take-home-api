@@ -1,12 +1,13 @@
 {
     "$schema": "https://mintlify.com/docs.json",
     "name": "Take-Home API",
+    "description": "A ready-made, well-designed REST API mimicking many real world scenarios",
     "basePath": "/",
-    "theme": "maple",
+    "theme": "mint",
     "colors": {
-        "primary": "#16A34A",
-        "light": "#4ADE80",
-        "dark": "#15803D"
+        "primary": "#08663E",
+        "light": "#2CCCB4",
+        "dark": "#178C77"
     },
     "navigation": {
         "tabs": [
@@ -15,7 +16,9 @@
                 "groups": [
                     {
                         "group": "Get Started",
-                        "pages": ["index"]
+                        "pages": [
+                            "index"
+                        ]
                     }
                 ]
             }
