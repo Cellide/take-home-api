@@ -6,38 +6,38 @@ Thank you for your interest in contributing! We welcome contributions from the c
 
 1. Fork the repository on GitHub
 2. Clone your fork locally:
-   ```bash
+```bash
    git clone https://github.com/your-username/take-home-api.git
    cd take-home-api
-   ```
+```
 3. Add the upstream repository:
-   ```bash
+```bash
    git remote add upstream https://github.com/Cellide/take-home-api.git
-   ```
+```
 4. Create a new branch for your feature or fix:
-   ```bash
+```bash
    git checkout -b feature/your-feature-name
-   ```
+```
 
 ## Development Setup
 
 1. Install dependencies:
-   ```bash
+```bash
    npm install
-   ```
+```
 2. Run the development server:
-   ```bash
+```bash
    npm run dev
-   ```
+```
 3. Run tests:
-   ```bash
+```bash
    npm test
-   ```
+```
 4. Lint and format code:
-   ```bash
+```bash
    npm run lint:fix
    npm run format
-   ```
+```
 
 ## Making Changes
 
@@ -68,9 +68,9 @@ This adds a "Signed-off-by" line to your commit message.
 ## Submitting Changes
 
 1. Push your branch to your fork:
-   ```bash
+```bash
    git push origin feature/your-feature-name
-   ```
+```
 2. Create a Pull Request on GitHub
 3. Describe your changes clearly in the PR description
 4. Reference any related issues using `#issue-number`
@@ -81,7 +81,7 @@ This adds a "Signed-off-by" line to your commit message.
 
 - Keep PRs focused on a single feature or fix
 - Include descriptive commit messages
-- Update the README if you're adding new functionality
+- Update the scenario README if you're adding new functionality
 - Ensure code is linted and formatted
 - Add tests for new features (when test coverage is enabled)
 
