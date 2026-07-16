@@ -3,10 +3,9 @@ import fastifyCors from '@fastify/cors';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
 import { randomUUID } from 'crypto';
-import { getLogger, logFlow, logRequest } from './core/logger';
+import { getLogger, logRequest } from './core/logger';
 import { ApiError } from './types';
 import { getRegisteredScenarios } from './core/scenario';
-import { clearCache } from './core/cache';
 
 declare module 'fastify' {
     interface FastifyRequest {

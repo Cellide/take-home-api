@@ -18,7 +18,7 @@ export interface Flight {
 
 export interface Airport {
     iata: string;
-    icao: string|null;
+    icao: string | null;
     name: string;
     city: string;
     country: string;

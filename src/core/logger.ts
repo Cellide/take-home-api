@@ -1,4 +1,4 @@
-asdfsdaimport pino from 'pino';
+import pino from 'pino';
 
 let logger: pino.Logger | null = null;
 
