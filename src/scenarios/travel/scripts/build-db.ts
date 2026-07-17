@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import type { Database } from 'sql.js';
+import type { Database, Statement } from 'sql.js';
 import { faker } from '@faker-js/faker';
 import { openDatabase, saveDatabase, dropDatabase } from '../../../core/db.js';
 
@@ -107,31 +107,44 @@ function hashString(str: string): number {
     return Math.abs(hash);
 }
 
-// Airline coverage: relationship data isn't sourced from anywhere real, so it's
-// assumed. Bigger airports (by passenger volume) get served by more airlines,
-// scaled between MIN and MAX, using the default (fictional) airline roster.
-function linkAirportsToAirlines(db: Database, airports: AirportRow[], fictionalAirlines: AirlineRow[]): void {
+// Relationship data isn't sourced from anywhere real, so coverage is assumed: bigger
+// airports (by passenger volume) get served by more airlines, scaled between MIN and
+// MAX airlines.
+function airlineCoverageCount(passengersMonthly: number, maxPassengers: number): number {
+    const share = maxPassengers > 0 ? passengersMonthly / maxPassengers : 0;
+    return Math.min(
+        MAX_AIRLINES_PER_AIRPORT,
+        Math.max(MIN_AIRLINES_PER_AIRPORT, Math.round(MIN_AIRLINES_PER_AIRPORT + share * (MAX_AIRLINES_PER_AIRPORT - MIN_AIRLINES_PER_AIRPORT))),
+    );
+}
+
+// Fictional and real airlines are two separate rosters, so coverage is calculated
+// independently for each: every airport gets its own MIN-MAX count of fictional
+// airlines, plus its own MIN-MAX count of real airlines.
+function linkAirportsToRoster(insertLink: Statement, airports: AirportRow[], roster: AirlineRow[], seedSuffix: string): void {
     const maxPassengers = Math.max(...airports.map((a) => a.passengersMonthly));
-    const fictionalAirlineIatas = fictionalAirlines.map((a) => a.iata);
+    const rosterIatas = roster.map((a) => a.iata);
 
-    const insertLink = db.prepare(`
-        INSERT INTO airport_airlines (airport_iata, airline_iata)
-        VALUES (:airport_iata, :airline_iata)
-    `);
     for (const airport of airports) {
-        faker.seed(hashString(airport.iata));
+        faker.seed(hashString(`${airport.iata}:${seedSuffix}`));
 
-        const share = maxPassengers > 0 ? airport.passengersMonthly / maxPassengers : 0;
-        const count = Math.min(
-            MAX_AIRLINES_PER_AIRPORT,
-            Math.max(MIN_AIRLINES_PER_AIRPORT, Math.round(MIN_AIRLINES_PER_AIRPORT + share * (MAX_AIRLINES_PER_AIRPORT - MIN_AIRLINES_PER_AIRPORT))),
-        );
-
-        const servingAirlineIatas = faker.helpers.arrayElements(fictionalAirlineIatas, count);
+        const count = airlineCoverageCount(airport.passengersMonthly, maxPassengers);
+        const servingAirlineIatas = faker.helpers.arrayElements(rosterIatas, count);
         for (const airlineIata of servingAirlineIatas) {
             insertLink.run({ ':airport_iata': airport.iata, ':airline_iata': airlineIata });
         }
     }
+}
+
+function linkAirportsToAirlines(db: Database, airports: AirportRow[], fictionalAirlines: AirlineRow[], realAirlines: AirlineRow[]): void {
+    const insertLink = db.prepare(`
+        INSERT INTO airport_airlines (airport_iata, airline_iata)
+        VALUES (:airport_iata, :airline_iata)
+    `);
+
+    linkAirportsToRoster(insertLink, airports, fictionalAirlines, 'fictional');
+    linkAirportsToRoster(insertLink, airports, realAirlines, 'real');
+
     insertLink.free();
 }
 
@@ -228,7 +241,7 @@ async function buildDb(): Promise<void> {
     }
     insertAirline.free();
 
-    linkAirportsToAirlines(db, airports, fictionalAirlines);
+    linkAirportsToAirlines(db, airports, fictionalAirlines, realAirlines);
 
     await saveDatabase(TRAVEL_DIR, DB_NAME);
     await dropDatabase(DB_NAME);
@@ -236,7 +249,7 @@ async function buildDb(): Promise<void> {
     console.log(`Built ${dbPath}`);
     console.log(`  airports: ${airports.length}`);
     console.log(`  airlines: ${fictionalAirlines.length} fictional + ${realAirlines.length} real`);
-    console.log(`  airport_airlines: up to ${MAX_AIRLINES_PER_AIRPORT} fictional airlines per airport`);
+    console.log(`  airport_airlines: up to ${MAX_AIRLINES_PER_AIRPORT} fictional + ${MAX_AIRLINES_PER_AIRPORT} real airlines per airport`);
 }
 
 buildDb().catch((err) => {
