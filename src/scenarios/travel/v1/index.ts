@@ -11,6 +11,18 @@ export const travelV1: Scenario = {
 
     openapi() {
         return {
+            '/api/travel/v1/airports': {
+                get: {
+                    summary: 'List all airports',
+                    description: 'Get a complete list of all available airports',
+                    tags: ['Travel V1'],
+                    responses: {
+                        '200': {
+                            description: 'Successful airport list retrieval',
+                        },
+                    },
+                },
+            },
             '/api/travel/v1/flights': {
                 get: {
                     summary: 'Search for flights',

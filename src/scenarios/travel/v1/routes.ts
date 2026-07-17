@@ -4,7 +4,7 @@ import { cacheKey, getCached, setCached } from '../../../core/cache.js';
 import { generateFlights } from './generator.js';
 import { TravelStore } from './store.js';
 import { logFlow } from '../../../core/logger.js';
-import type { Flight } from '../../../types/index.js';
+import type { Flight, Airport } from '../../../types/index.js';
 
 const CACHE_TTL = 3600;
 const SCENARIO = 'travel';
@@ -74,6 +74,29 @@ const flightDetailSchema = {
                 flightNumber: { type: 'string' },
                 price: { type: 'number' },
                 available: { type: 'number' },
+            },
+        },
+    },
+};
+
+const listAirportsSchema = {
+    response: {
+        200: {
+            type: 'object',
+            properties: {
+                airports: {
+                    type: 'array',
+                    items: {
+                        type: 'object',
+                        properties: {
+                            iata: { type: 'string' },
+                            icao: { type: ['string', 'null'] },
+                            name: { type: 'string' },
+                            city: { type: 'string' },
+                            country: { type: 'string' },
+                        },
+                    },
+                },
             },
         },
     },
@@ -173,6 +196,43 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
             });
 
             return flight;
+        },
+    );
+
+    app.get(
+        '/api/travel/v1/airports',
+        {
+            schema: listAirportsSchema,
+        },
+        async (request) => {
+            logFlow({
+                reqId: request.id,
+                flow: 'list-airports',
+                step: 'fetch',
+            });
+
+            const cacheKeyVal = cacheKey(NAMESPACE, 'airports');
+            let airports = getCached<Airport[]>(cacheKeyVal);
+
+            if (!airports) {
+                airports = await store.getAirports();
+                setCached(cacheKeyVal, airports, CACHE_TTL);
+
+                logFlow({
+                    reqId: request.id,
+                    flow: 'list-airports',
+                    step: 'generated',
+                    data: { count: airports.length },
+                });
+            } else {
+                logFlow({
+                    reqId: request.id,
+                    flow: 'list-airports',
+                    step: 'cached',
+                });
+            }
+
+            return { airports };
         },
     );
 }
