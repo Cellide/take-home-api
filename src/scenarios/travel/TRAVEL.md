@@ -11,6 +11,17 @@
   - This project claims **no responsibility for information correctness**
 - **All generated flight data is mocked**, there's no correlation to any real past, present or future flight.
 
+## Edge Cases
+
+In advanced scenarios, look out for:
+
+- Cities with the same name, same country;
+- IATA and ICAO codes are not similar;
+- UTC Offsets can be decimal (half-hours, quarter-hours);
+- Unicode characters;
+- Arrival dates advancing a day or more;
+- Arrival dates regressing a day;
+
 ## References
 
 Airports information: https://www.world-airport-codes.com/alphabetical/airport-code
