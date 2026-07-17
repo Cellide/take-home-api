@@ -1,6 +1,6 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
-import type { Flight, Airport } from '../../../types/index.js';
+import type { Flight, Airport } from '../types/index.js';
 import { getDatabase, openDatabase } from '../../../core/db.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -28,14 +28,13 @@ export class TravelStore {
     async getAirports(): Promise<Airport[]> {
         const db = await this.ensureDatabase();
 
-        const stmt = db.prepare('SELECT iata, icao, name, city, country FROM airports');
+        const stmt = db.prepare('SELECT iata, name, city, country FROM airports');
         const airports: Airport[] = [];
 
         while (stmt.step()) {
             const row = stmt.getAsObject();
             airports.push({
                 iata: row.iata as string,
-                icao: row.icao as string,
                 name: row.name as string,
                 city: row.city as string,
                 country: row.country as string,

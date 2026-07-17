@@ -1,8 +1,10 @@
 import { faker } from '@faker-js/faker';
-import type { Flight } from '../../../types/index.js';
+import type { Flight } from '../types/index.js';
 
+// TODO: remove this, use database
 const AIRLINES = ['United', 'American', 'Delta', 'Southwest', 'JetBlue', 'Alaska', 'Spirit'];
 
+// TODO: only allow IATA codes, from DB
 export function generateFlightId(from: string, to: string, date: string, index: number): string {
     return `${from.toLowerCase()}-${to.toLowerCase()}-${date}-${index}`;
 }

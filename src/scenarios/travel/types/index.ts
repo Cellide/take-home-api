@@ -14,11 +14,11 @@ export interface Flight {
     airline: string;
     flightNumber: string;
     price: number;
+    available?: number;
 }
 
 export interface Airport {
     iata: string;
-    icao: string | null;
     name: string;
     city: string;
     country: string;

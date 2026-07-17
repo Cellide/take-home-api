@@ -4,7 +4,7 @@ import { cacheKey, getCached, setCached } from '../../../core/cache.js';
 import { generateFlights } from './generator.js';
 import { TravelStore } from './store.js';
 import { logFlow } from '../../../core/logger.js';
-import type { Flight, Airport } from '../../../types/index.js';
+import type { Flight, Airport } from '../types/index.js';
 
 const CACHE_TTL = 3600;
 const LARGE_CACHE_TTL = 3600*24;
@@ -91,7 +91,6 @@ const listAirportsSchema = {
                         type: 'object',
                         properties: {
                             iata: { type: 'string' },
-                            icao: { type: ['string', 'null'] },
                             name: { type: 'string' },
                             city: { type: 'string' },
                             country: { type: 'string' },
