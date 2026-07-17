@@ -1,56 +1,56 @@
-iata,icao,airline,country,country_code
-AI,ADD,Addis Airlines,Ethiopia,ET
-NA,NLA,Nelson Airways,South Africa,ZA
-SN,SNA,Sun&Air,Egypt,EG
-KI,AIK,Air Kinshasa,Democratic Republic of the Congo,CD
-RC,ROC,Royal Casablanca,Morocco,MA
-CN,NAR,China National Aviation,China,CN
-6I,IND,Bharat Blue Airlines,India,IN
-MB,MAB,Malaysia Bhd,Malaysia,MY
-DH,DHA,Doha Airways,Qatar,QA
-FD,FLD,Fly Dubai,United Arab Emirates,AE
-KU,SKR,Sakura Airlines,Japan,JP
-TA,TMA,Temasek Airlines,Singapore,SG
-DI,DYA,Diriyah,Saudi Arabia,SA
-HJ,VHJ,HanoiJet,Vietnam,VN
-PO,PSO,Pasay Oceanic,Philippines,PH
-IT,ITR,Interinsular Indonesia,Indonesia,ID
-KO,KYK,SkyKorea,South Korea,KR
-UT,UTA,Unity Airways,United Arab Emirates,AE
-KA,AQK,Akmola Airlines,Kazakhstan,KZ
-UU,UZA,Uzbek Air,Uzbekistan,UZ
-MA,SMA,Samui Airways,Thailand,TH
-AL,AMA,Amman Alia Airlines,Jordan,JO
-EA,EGA,Evergreen Airways,Taiwan,TW
-VB,VIM,Vimana,Bangladesh,BD
-I3,ILI,Islamabad International,Pakistan,PK
-PR,PAT,PatrickAir,Ireland,IE
-BL,BLT,Belüften,Germany,DE
-KW,KGA,Kingdom Airways,England,GB
-PE,PNL,Peninsula,Spain,ES
-AG,AGE,Air Gaule,France,FR
-HA,HVA,Hava Yollari Group,Turkey,TR
-MG,MGY,Magyar Airlines,Hungary,HU
-AE,AEK,Aeroeskadrilya,Russia,RU
-NR,NRA,Norden Airlines,Sweden,SE
-O3,OUT,Out3,England,GB
-OA,MOA,Minoan Airlines,Greece,GR
-PB,PBA,PBA Air,Portugal,PT
-IA,AZR,Azurra Airways,Italy,IT
-BH,BHA,Bohemia Airlines,Czech Republic,CZ
-AS,SAV,Sava Airlines,Serbia,RS
-TG,TGA,Together Airlines,United States of America,US
-CO,CNA,Continental Airlines,United States of America,US
-BV,BVA,Bravo Airlines,United States of America,US
-JN,JTN,JetNavy,United States of America,US
-LF,ARL,Air Leaf,Canada,CA
-YA,PYA,Cup Airlines,Panama,PA
-CY,CYP,Calypso Airlines,Trinidad and Tobago,TT
-SP,SPA,Spirit Airways,Australia,AU
-RA,RKA,Rock Australia,Australia,AU
-MR,MRA,Air Maori,New Zealand,NZ
-LT,LTA,Latin Airlines,Chile,CL
-RV,ARV,Aerovías,Colombia,CO
-PN,PNY,Penalty Linhas Aéreas,Brazil,BR
-VE,VAA,Verde-Amarelo Linhas Aéreas,Brazil,BR
-GU,ALG,Aerolíneas Gaúchas,Argentina,AR
+iata,icao,airline,country,country_code,low_cost,first_class,business_class
+AI,ADD,Addis Airlines,Ethiopia,ET,0,0,1
+NA,NLA,Nelson Airways,South Africa,ZA,0,0,0
+SN,SNA,Sun&Air,Egypt,EG,0,0,0
+KI,AIK,Air Kinshasa,Democratic Republic of the Congo,CD,0,0,0
+RC,ROC,Royal Casablanca,Morocco,MA,0,0,1
+CN,NAR,China National Aviation,China,CN,0,0,1
+6I,IND,Bharat Blue Airlines,India,IN,0,0,0
+MB,MAB,Malaysia Bhd,Malaysia,MY,1,0,0
+DH,DHA,Doha Airways,Qatar,QA,0,1,1
+FD,FLD,Fly Dubai,United Arab Emirates,AE,0,1,1
+KU,SKR,Sakura Airlines,Japan,JP,0,1,1
+TA,TMA,Temasek Airlines,Singapore,SG,0,1,1
+DI,DYA,Diriyah,Saudi Arabia,SA,0,0,0
+HJ,VHJ,HanoiJet,Vietnam,VN,0,0,0
+PO,PSO,Pasay Oceanic,Philippines,PH,0,0,0
+IT,ITR,Interinsular Indonesia,Indonesia,ID,0,0,0
+KO,KYK,SkyKorea,South Korea,KR,0,0,1
+UT,UTA,Unity Airways,United Arab Emirates,AE,0,0,1
+KA,AQK,Akmola Airlines,Kazakhstan,KZ,0,0,0
+UU,UZA,Uzbek Air,Uzbekistan,UZ,0,0,0
+MA,SMA,Samui Airways,Thailand,TH,0,0,0
+AL,AMA,Amman Alia Airlines,Jordan,JO,0,0,1
+EA,EGA,Evergreen Airways,Taiwan,TW,0,0,0
+VB,VIM,Vimana,Bangladesh,BD,0,0,0
+I3,ILI,Islamabad International,Pakistan,PK,0,0,0
+PR,PAT,PatrickAir,Ireland,IE,1,0,0
+BL,BLT,Belüften,Germany,DE,0,0,1
+KW,KGA,Kingdom Airways,England,GB,0,0,1
+PE,PNL,Peninsula,Spain,ES,0,0,0
+AG,AGE,Air Gaule,France,FR,0,0,1
+HA,HVA,Hava Yollari Group,Turkey,TR,0,0,0
+MG,MGY,Magyar Airlines,Hungary,HU,1,0,0
+AE,AEK,Aeroeskadrilya,Russia,RU,0,0,1
+NR,NRA,Norden Airlines,Sweden,SE,0,0,1
+O3,OUT,Out3,England,GB,1,0,0
+OA,MOA,Minoan Airlines,Greece,GR,0,0,0
+PB,PBA,PBA Air,Portugal,PT,0,0,0
+ZR,AZR,Azurra Airways,Italy,IT,0,0,0
+BH,BHA,Bohemia Airlines,Czech Republic,CZ,0,0,0
+AS,SAV,Sava Airlines,Serbia,RS,0,0,0
+TG,TGA,Together Airlines,United States of America,US,0,0,1
+CO,CNA,Continental Airlines,United States of America,US,0,0,1
+BV,BVA,Bravo Airlines,United States of America,US,0,0,1
+JN,NEA,Northeast Airlines,United States of America,US,1,0,0
+LF,ARL,Air Leaf,Canada,CA,0,0,0
+YA,PYA,Cup Airlines,Panama,PA,0,0,1
+CY,CYP,Calypso Airlines,Trinidad and Tobago,TT,0,0,0
+SC,SCA,Southern Cross Airways,Australia,AU,0,0,0
+RA,RKA,Rock Australia,Australia,AU,0,0,0
+MR,MRA,Air Maori,New Zealand,NZ,0,0,0
+LT,LTA,Latin Airlines,Chile,CL,0,0,1
+RV,ARV,Aerovías,Colombia,CO,0,0,0
+PN,PNY,Penalty Linhas Aéreas,Brazil,BR,0,0,0
+VE,VAA,Verde-Amarelo Linhas Aéreas,Brazil,BR,0,0,0
+GU,ALG,Aerolíneas Gaúchas,Argentina,AR,0,0,0

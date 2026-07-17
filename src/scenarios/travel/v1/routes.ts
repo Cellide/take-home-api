@@ -7,6 +7,7 @@ import { logFlow } from '../../../core/logger.js';
 import type { Flight, Airport } from '../../../types/index.js';
 
 const CACHE_TTL = 3600;
+const LARGE_CACHE_TTL = 3600*24;
 const SCENARIO = 'travel';
 const NAMESPACE = `${SCENARIO}:v1`;
 
@@ -216,7 +217,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
 
             if (!airports) {
                 airports = await store.getAirports();
-                setCached(cacheKeyVal, airports, CACHE_TTL);
+                setCached(cacheKeyVal, airports, LARGE_CACHE_TTL);
 
                 logFlow({
                     reqId: request.id,

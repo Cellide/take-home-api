@@ -28,14 +28,14 @@ export class TravelStore {
     async getAirports(): Promise<Airport[]> {
         const db = await this.ensureDatabase();
 
-        const stmt = db.prepare('SELECT iata, icao, name, city, country FROM airports ORDER BY iata');
+        const stmt = db.prepare('SELECT iata, icao, name, city, country FROM airports');
         const airports: Airport[] = [];
 
         while (stmt.step()) {
             const row = stmt.getAsObject();
             airports.push({
                 iata: row.iata as string,
-                icao: row.icao as string | null,
+                icao: row.icao as string,
                 name: row.name as string,
                 city: row.city as string,
                 country: row.country as string,
