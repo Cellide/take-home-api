@@ -16,7 +16,8 @@
         "format": "prettier --write src",
         "format:check": "prettier --check src",
         "docs": "cd docs && mintlify dev --port 3001 --disable-openapi --no-open",
-        "docs:check": "cd docs && mintlify broken-links && mintlify a11y && mintlify validate"
+        "docs:check": "cd docs && mintlify broken-links && mintlify a11y && mintlify validate",
+        "db:build:travel": "tsx src/scenarios/travel/scripts/build-db.ts"
     },
     "keywords": [
         "api",

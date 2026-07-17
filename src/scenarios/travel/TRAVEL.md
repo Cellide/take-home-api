@@ -22,6 +22,18 @@ In advanced scenarios, look out for:
 - Arrival dates advancing a day or more;
 - Arrival dates regressing a day;
 
+## SQLite Build
+
+`npm run db:build:travel` parses `airports.csv`, `fictional_airlines.csv`, and `real_airlines.csv`
+into `travel.sqlite` (checked in, alongside the CSVs it's derived from). Tables:
+
+- `airports` — one row per airport CSV row.
+- `airlines` — both fictional and real rosters, flagged by `is_fictional`.
+- `airport_airlines` — assumed airline coverage per airport (not sourced from anywhere
+  real). Each airport is linked to 3-10 fictional airlines (the project default roster),
+  with busier airports (by `passengers_monthly`) getting more coverage. Assignment is
+  deterministic (seeded per airport IATA code), so rebuilding the db is reproducible.
+
 ## References
 
 Airports information: https://www.world-airport-codes.com/alphabetical/airport-code
