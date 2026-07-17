@@ -11,7 +11,6 @@ const MAX_AIRLINES_PER_AIRPORT = 10;
 const MIN_AIRLINES_PER_AIRPORT = 3;
 
 interface AirportRow {
-    rank: number;
     iata: string;
     icao: string;
     name: string;
@@ -72,7 +71,6 @@ function parseCsv(filePath: string): string[][] {
 function parseAirports(filePath: string): AirportRow[] {
     const [, ...rows] = parseCsv(filePath);
     return rows.map((r) => ({
-        rank: Number(r[0]),
         iata: r[1],
         icao: r[2],
         name: r[3],
@@ -124,7 +122,7 @@ async function buildDb(): Promise<void> {
     db.run(`
         CREATE TABLE airports (
             iata TEXT PRIMARY KEY,
-            icao TEXT,
+            icao TEXT NOT NULL,
             name TEXT NOT NULL,
             city TEXT NOT NULL,
             country TEXT NOT NULL,
@@ -132,33 +130,40 @@ async function buildDb(): Promise<void> {
             passengers_monthly REAL NOT NULL,
             lat REAL NOT NULL,
             lng REAL NOT NULL,
-            utc_offset REAL NOT NULL,
-            rank INTEGER NOT NULL
+            utc_offset REAL NOT NULL
         );
+        CREATE UNIQUE INDEX idx_airports_icao ON airports (icao);
 
-        CREATE TABLE airlines (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            iata TEXT NOT NULL,
-            icao TEXT,
+        CREATE TABLE airlines_fictional (
+            iata TEXT PRIMARY KEY,
+            icao TEXT NOT NULL,
             name TEXT NOT NULL,
             country TEXT NOT NULL,
-            country_code TEXT NOT NULL,
-            is_fictional INTEGER NOT NULL,
-            UNIQUE (iata, is_fictional)
+            country_code TEXT NOT NULL
         );
+        CREATE UNIQUE INDEX idx_airlines_fictional_icao ON airlines_fictional (icao);
+
+        CREATE TABLE airlines_real (
+            iata TEXT PRIMARY KEY,
+            icao TEXT NOT NULL,
+            name TEXT NOT NULL,
+            country TEXT NOT NULL,
+            country_code TEXT NOT NULL
+        );
+        CREATE UNIQUE INDEX idx_airlines_real_icao ON airlines_real (icao);
 
         CREATE TABLE airport_airlines (
             airport_iata TEXT NOT NULL REFERENCES airports (iata),
-            airline_id INTEGER NOT NULL REFERENCES airlines (id),
-            PRIMARY KEY (airport_iata, airline_id)
+            airline_iata TEXT NOT NULL REFERENCES airlines_fictional (iata),
+            PRIMARY KEY (airport_iata, airline_iata)
         );
 
-        CREATE INDEX idx_airport_airlines_airline ON airport_airlines (airline_id);
+        CREATE INDEX idx_airport_airlines_airline ON airport_airlines (airline_iata);
     `);
 
     const insertAirport = db.prepare(`
-        INSERT INTO airports (iata, icao, name, city, country, country_code, passengers_monthly, lat, lng, utc_offset, rank)
-        VALUES (:iata, :icao, :name, :city, :country, :country_code, :passengers_monthly, :lat, :lng, :utc_offset, :rank)
+        INSERT INTO airports (iata, icao, name, city, country, country_code, passengers_monthly, lat, lng, utc_offset)
+        VALUES (:iata, :icao, :name, :city, :country, :country_code, :passengers_monthly, :lat, :lng, :utc_offset)
     `);
     for (const a of airports) {
         insertAirport.run({
@@ -172,47 +177,49 @@ async function buildDb(): Promise<void> {
             ':lat': a.lat,
             ':lng': a.lng,
             ':utc_offset': a.utcOffset,
-            ':rank': a.rank,
         });
     }
     insertAirport.free();
 
-    const insertAirline = db.prepare(`
-        INSERT INTO airlines (iata, icao, name, country, country_code, is_fictional)
-        VALUES (:iata, :icao, :name, :country, :country_code, :is_fictional)
+    const insertFictionalAirline = db.prepare(`
+        INSERT INTO airlines_fictional (iata, icao, name, country, country_code)
+        VALUES (:iata, :icao, :name, :country, :country_code)
     `);
-    const fictionalAirlineIds: number[] = [];
     for (const airline of fictionalAirlines) {
-        insertAirline.run({
+        insertFictionalAirline.run({
             ':iata': airline.iata,
             ':icao': airline.icao,
             ':name': airline.airline,
             ':country': airline.country,
             ':country_code': airline.countryCode,
-            ':is_fictional': 1,
         });
-        fictionalAirlineIds.push(db.exec('SELECT last_insert_rowid() AS id')[0].values[0][0] as number);
     }
+    insertFictionalAirline.free();
+
+    const insertRealAirline = db.prepare(`
+        INSERT INTO airlines_real (iata, icao, name, country, country_code)
+        VALUES (:iata, :icao, :name, :country, :country_code)
+    `);
     for (const airline of realAirlines) {
-        insertAirline.run({
+        insertRealAirline.run({
             ':iata': airline.iata,
             ':icao': airline.icao,
             ':name': airline.airline,
             ':country': airline.country,
             ':country_code': airline.countryCode,
-            ':is_fictional': 0,
         });
     }
-    insertAirline.free();
+    insertRealAirline.free();
 
     // Airline coverage: relationship data isn't sourced from anywhere real, so it's
     // assumed. Bigger airports (by passenger volume) get served by more airlines,
     // scaled between MIN and MAX, using the default (fictional) airline roster.
     const maxPassengers = Math.max(...airports.map((a) => a.passengersMonthly));
+    const fictionalAirlineIatas = fictionalAirlines.map((a) => a.iata);
 
     const insertLink = db.prepare(`
-        INSERT INTO airport_airlines (airport_iata, airline_id)
-        VALUES (:airport_iata, :airline_id)
+        INSERT INTO airport_airlines (airport_iata, airline_iata)
+        VALUES (:airport_iata, :airline_iata)
     `);
     for (const airport of airports) {
         faker.seed(hashString(airport.iata));
@@ -223,9 +230,9 @@ async function buildDb(): Promise<void> {
             Math.max(MIN_AIRLINES_PER_AIRPORT, Math.round(MIN_AIRLINES_PER_AIRPORT + share * (MAX_AIRLINES_PER_AIRPORT - MIN_AIRLINES_PER_AIRPORT))),
         );
 
-        const servingAirlineIds = faker.helpers.arrayElements(fictionalAirlineIds, count);
-        for (const airlineId of servingAirlineIds) {
-            insertLink.run({ ':airport_iata': airport.iata, ':airline_id': airlineId });
+        const servingAirlineIatas = faker.helpers.arrayElements(fictionalAirlineIatas, count);
+        for (const airlineIata of servingAirlineIatas) {
+            insertLink.run({ ':airport_iata': airport.iata, ':airline_iata': airlineIata });
         }
     }
     insertLink.free();
