@@ -1,0 +1,56 @@
+iata,icao,airline,country,country_code
+AD,ADD,Addis Airlines,Ethiopia,ET
+NA,NLA,Nelson Airways,South Africa,ZA
+SA,SNA,Sun&Air,Egypt,EG
+AK,AIK,Air Kinshasa,Democratic Republic of the Congo,CD
+RC,ROC,Royal Casablanca,Morocco,MA
+AR,NAR,China National Aviation,China,CN
+6I,IND,Bharat Blue Airlines,India,IN
+MB,MAB,Malaysia Bhd,Malaysia,MY
+DH,DHA,Doha Airways,Qatar,QA
+FD,FLD,Fly Dubai,United Arab Emirates,AE
+SU,SKR,Sakura Airlines,Japan,JP
+TA,TMA,Temasek Airlines,Singapore,SG
+DI,DYA,Diriyah,Saudi Arabia,SA
+HJ,VHJ,HanoiJet,Vietnam,VN
+PO,PSO,Pasay Oceanic,Philippines,PH
+IT,ITR,Interinsular Indonesia,Indonesia,ID
+SK,KYK,SkyKorea,South Korea,KR
+UA,UTA,Unity Airways,United Arab Emirates,AE
+KA,AQK,Akmola Airlines,Kazakhstan,KZ
+UU,UZA,Uzbek Air,Uzbekistan,UZ
+MA,SMA,Samui Airways,Thailand,TH
+AL,AMA,Amman Alia Airlines,Jordan,JO
+EA,EGA,Evergreen Airways,Taiwan,TW
+VB,VIM,Vimana,Bangladesh,BD
+I3,ILI,Islamabad International,Pakistan,PK
+PR,PAT,PatrickAir,Ireland,IE
+BL,BLT,Belüften,Germany,DE
+GA,KGA,Kingdom Airways,England,GB
+PE,PNL,Peninsula,Spain,ES
+AG,AGE,Air Gaule,France,FR
+HA,HVA,Hava Yollari Group,Turkey,TR
+MG,MGY,Magyar Airlines,Hungary,HU
+AE,AEK,Aeroeskadrilya,Russia,RU
+NR,NRA,Norden Airlines,Sweden,SE
+O3,OUT,Out3,England,GB
+OA,MOA,Minoan Airlines,Greece,GR
+PB,PBA,PBA Air,Portugal,PT
+IA,AZR,Azurra Airways,Italy,IT
+BR,BHA,Bohemia Airlines,Czech Republic,CZ
+SV,SVA,Sava Airlines,Serbia,RS
+TG,TGA,Together Airlines,United States of America,US
+CO,CNA,Continental Airlines,United States of America,US
+VA,BVA,Bravo Airlines,United States of America,US
+JN,JTN,JetNavy,United States of America,US
+LF,ARL,Air Leaf,Canada,CA
+YA,PYA,Cup Airlines,Panama,PA
+CY,CYP,Calypso Airlines,Trinidad and Tobago,TT
+SP,SPA,Spirit Airways,Australia,AU
+RA,RKA,Rock Australia,Australia,AU
+MR,MRA,Air Maori,New Zealand,NZ
+LA,LTA,Latin Airlines,Chile,CL
+AV,ARV,Aerovías,Colombia,CO
+PN,PNY,Penalty Linhas Aéreas,Brazil,BR
+VE,VAA,Verde-Amarelo Linhas Aéreas,Brazil,BR
+GU,ALG,Aerolíneas Gaúchas,Argentina,AR

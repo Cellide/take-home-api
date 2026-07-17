@@ -1,0 +1,56 @@
+iata,icao,airline,country,country_code
+ET,ETH,Ethiopian Airlines,Ethiopia,ET
+SA,SAA,South African Airways,South Africa,ZA
+MS,MSR,Egyptair,Egypt,EG
+4H,DRC,Air Congo,Democratic Republic of the Congo,CD
+AT,RAM,Royal Air Maroc,Morocco,MA
+CA,CCA,Air China,China,CN
+6E,IGO,IndiGo,India,IN
+AK,AXM,AirAsia,Malaysia,MY
+QR,QTR,Qatar Airways,Qatar,QA
+EK,UAE,Emirates,United Arab Emirates,AE
+JL,JAL,Japan Airlines,Japan,JP
+SQ,SIA,Singapore Airlines,Singapore,SG
+SV,SVA,Saudia,Saudi Arabia,SA
+VJ,VJC,VietJet Air,Vietnam,VN
+5J,CEB,Cebu Pacific,Philippines,PH
+GA,GIA,Garuda Indonesia,Indonesia,ID
+KE,KAL,Korean Air,South Korea,KR
+EY,ETD,Etihad Airways,United Arab Emirates,AE
+KC,KZR,Air Astana,Kazakhstan,KZ
+HY,UZB,Uzbekistan Airways,Uzbekistan,UZ
+PG,BKP,Bangkok Airways,Thailand,TH
+RJ,RJA,Royal Jordanian Airlines,Jordan,JO
+BR,EVA,EVA Airways,Taiwan,TW
+BG,BBC,Biman,Bangladesh,BD
+PK,PIA,Pakistan International Airlines,Pakistan,PK
+FR,RYR,Ryanair,Ireland,IE
+LH,DLH,Lufthansa,Germany,DE
+BA,BAW,British Airways,England,GB
+IB,IBE,Iberia,Spain,ES
+AF,AFR,Air France,France,FR
+TK,THY,Turkish Airlines,Turkey,TR
+W6,WZZ,Wizz Air,Hungary,HU
+SU,AFL,Aeroflot,Russia,RU
+SK,SAS,Scandinavian Airlines,Sweden,SE
+LS,EXS,Jet2,England,GB
+A3,AEE,Aegean Airlines,Greece,GR
+TP,TAP,TAP Air Portugal,Portugal,PT
+AZ,ITY,ITA Airways,Italy,IT
+OK,CSA,Czech Airlines,Czech Republic,CZ
+JU,ASL,AirSERBIA,Serbia,RS
+UA,UAL,United Airlines,United States of America,US
+AA,AAL,American Airlines,United States of America,US
+DL,DAL,Delta Air Lines,United States of America,US
+B6,JBU,JetBlue,United States of America,US
+AC,ACA,Air Canada,Canada,CA
+CM,CMP,Copa Airlines,Panama,PA
+BW,BWA,Caribbean Airlines,Trinidad and Tobago,TT
+QF,QFA,Qantas Airways,Australia,AU
+VA,VOZ,Virgin Australia,Australia,AU
+NZ,ANZ,Air New Zealand,New Zealand,NZ
+LA,TAM,LATAM Airlines,Chile,CL
+AV,AVA,Avianca,Colombia,CO
+G3,GLO,GOL Linhas Aéreas,Brazil,BR
+AD,AZU,Azul Linhas Aéreas,Brazil,BR
+AR,ARG,Aerolíneas Argentinas,Argentina,AR
