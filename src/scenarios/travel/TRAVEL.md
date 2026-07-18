@@ -22,6 +22,7 @@ Pay attention to scenario constraints:
 - Distances in kilometers;
 - Flight "numbers" may have letters;
 - IATA and ICAO codes are not similar or substrings;
+- Country names and ISO codes for sovereign states are not intuitive;
 - Dates and times are local, with UTC offset shown;
 - Unicode characters;
 - Layovers - a route may take many flights until destination;
@@ -32,13 +33,13 @@ Pay attention to scenario constraints:
 In advanced scenarios, look out for:
 
 - Cities with the same name, same country;
-- Official country codes are not always intuitive;
 - UTC Offsets can be decimal (half-hours, quarter-hours);
 - Arrival dates regressing a day;
 - Classes of seats;
 - Alternative currencies;
 - Zero seats in a class;
 - Airports with zero airlines serving them;
+- Loyalty points as currency;
 
 ## SQLite Build
 
@@ -47,7 +48,7 @@ In advanced scenarios, look out for:
 - `airports` — one row per airport CSV row, keyed by IATA code (ICAO is unique-indexed).
 - `airlines` — both fictional and real rosters in one table, keyed by IATA code (ICAO unique-indexed), flagged by `is_real`.
 - `airport_airlines` — assumed airline coverage per airport (not sourced from anywhere real).
-  - Each airport is linked to 3-10 airlines, with busier airports (by `passengers_monthly`) getting more coverage.
+  - Each airport is linked to a few airlines, with busier airports (by `passengers_monthly`) getting more coverage.
   - Assignment is deterministic, so rebuilding the database is reproducible.
 
 ## References
