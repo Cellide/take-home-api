@@ -7,9 +7,12 @@
 - Airline names, codes, and other related metadata are fictional; this was to allow the project to adjust edge cases, considerations, rules and constraints that has no bearing to the real world counterparts;
   - Real airlines names are presented as files that can be loaded; default are fictious names
   - Airline names are used solely as fictional data for educational purposes. **This project is not affiliated with or endorsed by any airline**.
+- Airport and Airlines metadata are conceptual choices, made for educational purposes and to better illustrate real-world cases.
 - CSV files in this repository are for informational purposes; they contain real world information, readily available public information.
   - This project claims **no responsibility for information correctness**
+  - Metadata around them are fictional.
 - **All generated flight data is mocked**, there's no correlation to any real past, present or future flight.
+- The three main travel CSV files are the source of truth, read-only by the engine. The `travel.sqlite` is buildable from the CSV files, and the runtime uses it also as read-only.
 
 ## Validations
 
@@ -35,6 +38,7 @@ In advanced scenarios, look out for:
 - Classes of seats;
 - Alternative currencies;
 - Zero seats in a class;
+- Airports with zero airlines serving them;
 
 ## SQLite Build
 
