@@ -5,8 +5,8 @@ export const citySchema = {
     name: { type: 'string', description: 'City name' },
     country: { type: 'string', description: 'Country name' },
     countryCode: { type: 'string', description: 'Country code (two letters)' },
-  }
-}
+  },
+};
 
 export const airportSchema = {
   type: 'object',
@@ -21,8 +21,8 @@ export const airportSchema = {
     utcOffset: { type: 'number', description: 'UTC offset' },
     lat: { type: 'number', description: 'Latitude of airport' },
     long: { type: 'number', description: 'Longitude of airport' },
-  }
-}
+  },
+};
 
 export const airlineSchema = {
   type: 'object',
@@ -33,8 +33,8 @@ export const airlineSchema = {
     name: { type: 'string', description: 'Airline name' },
     country: { type: 'string', description: 'Airline country of origin' },
     countryCode: { type: 'string', description: 'Airline country of origin code (two letters)' },
-  }
-}
+  },
+};
 
 export const pricingSchema = {
   type: 'object',
@@ -45,8 +45,8 @@ export const pricingSchema = {
     economy: { type: 'number', description: 'Price for Economy seat' },
     businessClass: { type: 'number', description: 'Price for Business Class seat' },
     firstClass: { type: 'number', description: 'Price for First Class seat' },
-  }
-}
+  },
+};
 
 export const seatsSchema = {
   type: 'object',
@@ -56,12 +56,24 @@ export const seatsSchema = {
     economy: { type: 'number', description: 'Available Economy seats' },
     businessClass: { type: 'number', description: 'Available Business Class seats' },
     firstClass: { type: 'number', description: 'Available First Class seats' },
-  }
-}
+  },
+};
 
 export const flightSchema = {
   type: 'object',
-  required: ['id', 'flightTimeHours', 'flightDistanceKms', 'departure', 'arrival', 'airline', 'plane', 'flightNumber', 'pricing', 'available', 'seats'],
+  required: [
+    'id',
+    'flightTimeHours',
+    'flightDistanceKms',
+    'departure',
+    'arrival',
+    'airline',
+    'plane',
+    'flightNumber',
+    'pricing',
+    'available',
+    'seats',
+  ],
   properties: {
     id: { type: 'string', description: 'Unique Flight identifier' },
     flightTimeHours: { type: 'number', description: 'Flight time in hours' },
@@ -155,14 +167,14 @@ export const searchFlightsParameters = {
         in: 'query',
         description: 'Departure airport code (3 letters IATA)',
         required: true,
-        schema: { type: 'string' },
+        schema: { type: 'string', minLength: 3, maxLength: 3 },
       },
       {
         name: 'to',
         in: 'query',
         description: 'Destination airport code (3 letters IATA)',
         required: true,
-        schema: { type: 'string' },
+        schema: { type: 'string', minLength: 3, maxLength: 3 },
       },
       {
         name: 'date',
@@ -231,6 +243,96 @@ export const getFlightParameters = {
   },
 };
 
+// Fastify route schemas below (querystring/params/response validation).
+// These are the base definitions; scenario route files may spread and
+// override specific keys when a version needs to deviate.
+
+export const searchFlightsQuerystring = {
+  type: 'object',
+  required: ['from', 'to', 'date'],
+  properties: {
+    from: { type: 'string', minLength: 3, maxLength: 3 },
+    to: { type: 'string', minLength: 3, maxLength: 3 },
+    date: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
+  },
+};
+
+export const flightIdParams = {
+  type: 'object',
+  required: ['id'],
+  properties: {
+    id: { type: 'string' },
+  },
+};
+
+// Flat shape actually produced by the (outdated) flight generator, kept
+// separate from `flightSchema` until the generator is updated to match it.
+export const flightResultSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    from: { type: 'string' },
+    to: { type: 'string' },
+    date: { type: 'string' },
+    departure: { type: 'string' },
+    arrival: { type: 'string' },
+    airline: { type: 'string' },
+    flightNumber: { type: 'string' },
+    price: { type: 'number' },
+    available: { type: 'number' },
+  },
+};
+
+export const baseSearchFlightsSchema = {
+  querystring: searchFlightsQuerystring,
+  response: {
+    200: {
+      type: 'object',
+      properties: {
+        routes: {
+          type: 'array',
+          items: flightResultSchema,
+        },
+      },
+    },
+  },
+};
+
+export const baseFlightDetailSchema = {
+  params: flightIdParams,
+  response: {
+    200: flightResultSchema,
+  },
+};
+
+export const baseListAirportsSchema = {
+  response: {
+    200: {
+      type: 'object',
+      properties: {
+        airports: {
+          type: 'array',
+          items: airportSchema,
+        },
+      },
+    },
+  },
+};
+
+export const baseListCitiesSchema = {
+  response: {
+    200: {
+      type: 'object',
+      properties: {
+        cities: {
+          type: 'array',
+          items: citySchema,
+        },
+      },
+    },
+  },
+};
+
 export const travelSchemas = {
   City: citySchema,
   Airport: airportSchema,
@@ -239,11 +341,11 @@ export const travelSchemas = {
   Seats: seatsSchema,
   Flight: flightSchema,
   Route: routeSchema,
-}
+};
 
 export const travelEndpoints = {
-  "/api/travel/v1/cities": citiesParameters,
-  "/api/travel/v1/airports": airportsParameters,
-  "/api/travel/v1/search": searchFlightsParameters,
-  "/api/travel/v1/flights/{id}": getFlightParameters,
+  '/api/travel/v1/cities': citiesParameters,
+  '/api/travel/v1/airports': airportsParameters,
+  '/api/travel/v1/search': searchFlightsParameters,
+  '/api/travel/v1/flights/{id}': getFlightParameters,
 };

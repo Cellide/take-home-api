@@ -5,7 +5,12 @@ import { generateFlights } from './generator.js';
 import { TravelStore } from './store.js';
 import { logFlow } from '../../../core/logger.js';
 import type { Flight, Airport, City } from '../types/index.js';
-import { citySchema, airportSchema } from '../types/openapi.js';
+import {
+  baseSearchFlightsSchema,
+  baseFlightDetailSchema,
+  baseListAirportsSchema,
+  baseListCitiesSchema,
+} from '../types/openapi.js';
 
 const CACHE_TTL = 3600;
 const LARGE_CACHE_TTL = 3600 * 24;
@@ -14,97 +19,12 @@ const NAMESPACE = `${SCENARIO}:v1`;
 
 const store = new TravelStore();
 
-const searchFlightsSchema = {
-  querystring: {
-    type: 'object',
-    required: ['from', 'to', 'date'],
-    properties: {
-      from: { type: 'string', minLength: 3, maxLength: 3 },
-      to: { type: 'string', minLength: 3, maxLength: 3 },
-      date: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
-    },
-  },
-  response: {
-    200: {
-      type: 'object',
-      properties: {
-        routes: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'string' },
-              from: { type: 'string' },
-              to: { type: 'string' },
-              date: { type: 'string' },
-              departure: { type: 'string' },
-              arrival: { type: 'string' },
-              airline: { type: 'string' },
-              flightNumber: { type: 'string' },
-              price: { type: 'number' },
-              available: { type: 'number' },
-            },
-          },
-        },
-      },
-    },
-  },
-};
-
-const flightDetailSchema = {
-  params: {
-    type: 'object',
-    required: ['id'],
-    properties: {
-      id: { type: 'string' },
-    },
-  },
-  response: {
-    200: {
-      type: 'object',
-      properties: {
-        id: { type: 'string' },
-        from: { type: 'string' },
-        to: { type: 'string' },
-        date: { type: 'string' },
-        departure: { type: 'string' },
-        arrival: { type: 'string' },
-        airline: { type: 'string' },
-        flightNumber: { type: 'string' },
-        price: { type: 'number' },
-        available: { type: 'number' },
-      },
-    },
-  },
-};
-
-const listAirportsSchema = {
-  response: {
-    200: {
-      type: 'object',
-      properties: {
-        airports: {
-          type: 'array',
-          items: airportSchema,
-        },
-      },
-    },
-  },
-};
-
-const listCitiesSchema = {
-  response: {
-    200: {
-      type: 'object',
-      properties: {
-        cities: {
-          type: 'array',
-          items: citySchema,
-        },
-      },
-    },
-  },
-};
+// v1 schemas are the shared base as-is today; spread/override here if this
+// version ever needs route-specific validation or response tweaks.
+const searchFlightsSchema = { ...baseSearchFlightsSchema };
+const flightDetailSchema = { ...baseFlightDetailSchema };
+const listAirportsSchema = { ...baseListAirportsSchema };
+const listCitiesSchema = { ...baseListCitiesSchema };
 
 export async function registerRoutes(app: FastifyInstance): Promise<void> {
   app.get<{ Querystring: { from: string; to: string; date: string } }>(
@@ -195,7 +115,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       logFlow({
         reqId: request.id,
         flow: 'flight-detail',
-        step: 'found',
+        step: 'lookup-found',
         data: { id, airline: flight.airline },
       });
 

@@ -46,11 +46,11 @@ export interface Flight {
   departure: {
     timestamp: string;
     airport: string;
-  },
+  };
   arrival: {
     timestamp: string;
     airport: string;
-  },
+  };
   airline: string;
   plane: string;
   flightNumber: string;
@@ -66,11 +66,11 @@ export interface Route {
   departure: {
     timestamp: string;
     airport: string;
-  },
+  };
   arrival: {
     timestamp: string;
     airport: string;
-  },
+  };
   flights: [Flight];
   available: number;
   pricing: [Pricing];

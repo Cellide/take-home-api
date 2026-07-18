@@ -114,7 +114,12 @@ function linkRegionalAirlines(insertLink: Statement, airports: AirportRow[], ros
   }
 }
 
-function linkAirportsToAirlines(db: Database, airports: AirportRow[], fictionalAirlines: AirlineRow[], realAirlines: AirlineRow[]): void {
+function linkAirportsToAirlines(
+  db: Database,
+  airports: AirportRow[],
+  fictionalAirlines: AirlineRow[],
+  realAirlines: AirlineRow[],
+): void {
   const insertLink = db.prepare(`
         INSERT INTO airport_airlines (airport_iata, airline_iata, regional)
         VALUES (:airport_iata, :airline_iata, :regional)
