@@ -21,6 +21,7 @@ export const airportSchema = {
     utcOffset: { type: 'number', description: 'UTC offset' },
     lat: { type: 'number', description: 'Latitude of airport' },
     long: { type: 'number', description: 'Longitude of airport' },
+    // type of airport is not exposed to API
   },
 };
 
@@ -33,12 +34,13 @@ export const airlineSchema = {
     name: { type: 'string', description: 'Airline name' },
     country: { type: 'string', description: 'Airline country of origin' },
     countryCode: { type: 'string', description: 'Airline country of origin code (two letters)' },
+    // boolean flags about seats are not exposed at Schema
   },
 };
 
 export const pricingSchema = {
   type: 'object',
-  required: ['currency', 'regular'],
+  required: ['currency'],
   properties: {
     currency: { type: 'string', description: 'Code for currency (three letters)' },
     regular: { type: 'number', description: 'Price for Regular seat' },
@@ -50,7 +52,7 @@ export const pricingSchema = {
 
 export const seatsSchema = {
   type: 'object',
-  required: ['regular'],
+  required: [],
   properties: {
     regular: { type: 'number', description: 'Available Regular seats' },
     economy: { type: 'number', description: 'Available Economy seats' },

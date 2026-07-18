@@ -14,6 +14,10 @@ export interface Airport {
   utcOffset: number;
   lat: number;
   long: number;
+  isStandard: boolean;
+  isRegional: boolean;
+  isHub: boolean;
+  isIsolated: boolean;
 }
 
 export interface Airline {
@@ -22,6 +26,10 @@ export interface Airline {
   name: string;
   country: string;
   countryCode: string;
+  hasEconomyClass: boolean;
+  hasBusinessClass: boolean;
+  hasFirstClass: boolean;
+  hasLoyaltyProgram: boolean;
 }
 
 export interface Pricing {

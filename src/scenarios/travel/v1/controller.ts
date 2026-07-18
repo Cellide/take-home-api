@@ -4,7 +4,7 @@ import { cacheKey, getCached, setCached } from '../../../core/cache.js';
 import { generateFlights } from './generator.js';
 import { TravelStore } from '../standard/store.js';
 import { logFlow } from '../../../core/logger.js';
-import type { Flight, Airport, City } from '../standard/index.js';
+import type { Flight, Airport, City } from '../standard/types.js';
 import type { V1Airport } from './types.js';
 
 const CACHE_TTL = 3600;
