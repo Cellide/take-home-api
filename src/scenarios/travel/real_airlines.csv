@@ -1,8 +1,9 @@
 iata,icao,airline,country,country_code,low_cost,first_class,business_class
-ET,ETH,Ethiopian Airlines,Ethiopia,ET,0,0,0
+ET,ETH,Ethiopian Airlines,Ethiopia,ET,0,0,1
 SA,SAA,South African Airways,South Africa,ZA,0,0,0
 MS,MSR,Egyptair,Egypt,EG,0,0,0
 4H,DRC,Air Congo,Democratic Republic of the Congo,CD,0,0,0
+P4,APK,Air Peace,Nigeria,NG,0,0,0
 AT,RAM,Royal Air Maroc,Morocco,MA,0,0,1
 CA,CCA,Air China,China,CN,0,0,0
 6E,IGO,IndiGo,India,IN,0,0,0
