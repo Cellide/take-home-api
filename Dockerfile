@@ -6,6 +6,7 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
+RUN npm run db:build:travel
 RUN npm run build
 
 FROM node:20-alpine
@@ -18,6 +19,7 @@ COPY package*.json ./
 RUN npm ci --only=production
 
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/src/scenarios/travel/travel.sqlite ./src/scenarios/travel/travel.sqlite
 
 RUN chown -R nodejs:nodejs /app
 
