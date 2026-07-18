@@ -57,6 +57,36 @@ export class TravelStore {
     return airports;
   }
 
+  async getAirlines(): Promise<Airline[]> {
+    const db = await this.ensureDatabase();
+
+    const stmt = db.prepare(
+      'SELECT iata, icao, name, country, country_code, is_real, low_cost, first_class, business_class, loyalty FROM airlines WHERE is_real = 1', // FIXME: pass as paramenter
+    );
+    const airlines: Airline[] = [];
+
+    while (stmt.step()) {
+      const row = stmt.getAsObject();
+      airlines.push({
+        iata: row.iata as string,
+        icao: row.icao as string,
+        name: row.name as string,
+        country: row.country as string,
+        countryCode: row.country_code as string,
+        lat: row.lat as number,
+        long: row.lng as number,
+        isHub: row.distance_hub as boolean,
+        hasEconomyClass: row.low_cost as boolean,
+        hasBusinessClass: row.business_class as boolean,
+        hasFirstClass: row.first_class as boolean,
+        hasLoyaltyProgram: row.loyalty as boolean,
+      });
+    }
+    stmt.free();
+
+    return airlines;
+  }
+
   async getCities(): Promise<City[]> {
     const db = await this.ensureDatabase();
 

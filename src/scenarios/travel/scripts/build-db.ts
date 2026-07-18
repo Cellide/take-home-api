@@ -342,12 +342,6 @@ function computeMeanNearestHubDistanceKm(airports: AirportRow[]): number {
   return nonHubs.length > 0 ? total / nonHubs.length : 0;
 }
 
-// Stage X - close cross border: airport pairs in different countries but within the
-// mean nearest-hub distance are connected with the union of airlines already serving
-// either side (e.g. from Stage 1). Still considered regional edges.
-// TODO: define in a future pass.
-function linkCrossBorderAirlines(_insertLink: Statement, _airports: AirportRow[], _meanHubDistanceKm: number): void {}
-
 function linkAirportsToAirlines(
   db: Database,
   airports: AirportRow[],
@@ -384,8 +378,7 @@ function linkAirportsToAirlines(
   // Stage 4
   linkLastMileAirlines(db, insertLink, normalAirports, regionalAirports);
 
-  // Stage X
-  linkCrossBorderAirlines(insertLink, normalAirports, meanHubDistanceKm);
+  // TODO: insert assertion about at least one airline at all but isolated airports.
 
   insertLink.free();
 }
@@ -509,7 +502,7 @@ async function buildDb(): Promise<void> {
   console.log(`  airlines: ${fictionalAirlines.length} fictional + ${realAirlines.length} real`);
   console.log(`  airport_airlines: regional (same-country) fictional + real airlines per airport`);
   console.log(`  isolated airports (no flights): ${airports.filter((a) => a.isolated).length}`);
-  console.log(`  regional airports (single roster airline): ${airports.filter((a) => a.regional).length}`);
+  console.log(`  regional airports (few airlines): ${airports.filter((a) => a.regional).length}`);
 }
 
 buildDb().catch((err) => {
