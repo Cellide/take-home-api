@@ -21,6 +21,7 @@ interface AirportRow {
   utcOffset: number;
   distanceHub: boolean;
   isolated: boolean;
+  regional: boolean;
 }
 
 interface AirlineRow {
@@ -86,6 +87,7 @@ function parseAirports(filePath: string): AirportRow[] {
     utcOffset: Number(r[9]),
     distanceHub: r[10] === '1',
     isolated: r[11] === '1',
+    regional: r[12] === '1',
   }));
 }
 
@@ -148,8 +150,8 @@ function computeMeanNearestHubDistanceKm(airports: AirportRow[]): number {
   return nonHubs.length > 0 ? total / nonHubs.length : 0;
 }
 
-// Stage 1 - regional: every airport is served by every airline headquartered in the
-// same country, regardless of MIN/MAX.
+// Stage 1 - regional: every (non-isolated, non-"regional"-flagged) airport is served by
+// every airline headquartered in the same country, regardless of MIN/MAX.
 function linkRegionalAirlines(insertLink: Statement, airports: AirportRow[], roster: AirlineRow[], linked: Map<string, Set<string>>): void {
   for (const airport of airports) {
     const regionalAirlines = roster.filter((a) => a.countryCode === airport.countryCode);
@@ -159,6 +161,20 @@ function linkRegionalAirlines(insertLink: Statement, airports: AirportRow[], ros
       insertLink.run({ ':airport_iata': airport.iata, ':airline_iata': airline.iata, ':regional': 1 });
       linkedIatas.add(airline.iata);
     }
+  }
+}
+
+// Stage 1b - single regional airline: airports flagged "regional" (below 4M passengers/month)
+// are served by exactly one same-country airline per roster, not the full country roster.
+function linkSingleRegionalAirline(insertLink: Statement, airports: AirportRow[], roster: AirlineRow[], linked: Map<string, Set<string>>): void {
+  for (const airport of airports) {
+    const candidates = roster.filter((a) => a.countryCode === airport.countryCode).sort((a, b) => a.iata.localeCompare(b.iata));
+    if (candidates.length === 0) continue;
+
+    const airline = candidates[0];
+    const linkedIatas = getOrCreateLinkedSet(linked, airport.iata);
+    insertLink.run({ ':airport_iata': airport.iata, ':airline_iata': airline.iata, ':regional': 1 });
+    linkedIatas.add(airline.iata);
   }
 }
 
@@ -215,17 +231,26 @@ function linkAirportsToAirlines(
         VALUES (:airport_iata, :airline_iata, :regional)
     `);
 
+  // isolated airports are intentionally left with no flights and take no part in any stage.
+  const linkableAirports = airports.filter((a) => !a.isolated);
+  const normalAirports = linkableAirports.filter((a) => !a.regional);
+  const regionalAirports = linkableAirports.filter((a) => a.regional);
+
   const meanHubDistanceKm = computeMeanNearestHubDistanceKm(airports);
   const fictionalLinked = new Map<string, Set<string>>();
   const realLinked = new Map<string, Set<string>>();
 
   // Stage 1
-  linkRegionalAirlines(insertLink, airports, fictionalAirlines, fictionalLinked);
-  linkRegionalAirlines(insertLink, airports, realAirlines, realLinked);
+  linkRegionalAirlines(insertLink, normalAirports, fictionalAirlines, fictionalLinked);
+  linkRegionalAirlines(insertLink, normalAirports, realAirlines, realLinked);
 
-  // Stage 2
-  linkCrossBorderAirlines(insertLink, airports, fictionalLinked, meanHubDistanceKm);
-  linkCrossBorderAirlines(insertLink, airports, realLinked, meanHubDistanceKm);
+  // Stage 1b
+  linkSingleRegionalAirline(insertLink, regionalAirports, fictionalAirlines, fictionalLinked);
+  linkSingleRegionalAirline(insertLink, regionalAirports, realAirlines, realLinked);
+
+  // Stage 2 - only normal (non-regional, non-isolated) airports participate in cross-border expansion.
+  linkCrossBorderAirlines(insertLink, normalAirports, fictionalLinked, meanHubDistanceKm);
+  linkCrossBorderAirlines(insertLink, normalAirports, realLinked, meanHubDistanceKm);
 
   // Stage 3
   linkHubAirlines();
@@ -262,7 +287,8 @@ async function buildDb(): Promise<void> {
             lng REAL NOT NULL,
             utc_offset REAL NOT NULL,
             distance_hub INTEGER NOT NULL,
-            isolated INTEGER NOT NULL
+            isolated INTEGER NOT NULL,
+            regional INTEGER NOT NULL
         );
         CREATE UNIQUE INDEX idx_airports_icao ON airports (icao);
 
@@ -290,8 +316,8 @@ async function buildDb(): Promise<void> {
     `);
 
   const insertAirport = db.prepare(`
-        INSERT INTO airports (iata, icao, name, city, country, country_code, passengers_monthly, lat, lng, utc_offset, distance_hub, isolated)
-        VALUES (:iata, :icao, :name, :city, :country, :country_code, :passengers_monthly, :lat, :lng, :utc_offset, :distance_hub, :isolated)
+        INSERT INTO airports (iata, icao, name, city, country, country_code, passengers_monthly, lat, lng, utc_offset, distance_hub, isolated, regional)
+        VALUES (:iata, :icao, :name, :city, :country, :country_code, :passengers_monthly, :lat, :lng, :utc_offset, :distance_hub, :isolated, :regional)
     `);
   for (const a of airports) {
     insertAirport.run({
@@ -307,6 +333,7 @@ async function buildDb(): Promise<void> {
       ':utc_offset': a.utcOffset,
       ':distance_hub': a.distanceHub ? 1 : 0,
       ':isolated': a.isolated ? 1 : 0,
+      ':regional': a.regional ? 1 : 0,
     });
   }
   insertAirport.free();
@@ -352,6 +379,8 @@ async function buildDb(): Promise<void> {
   console.log(`  airports: ${airports.length}`);
   console.log(`  airlines: ${fictionalAirlines.length} fictional + ${realAirlines.length} real`);
   console.log(`  airport_airlines: regional (same-country) fictional + real airlines per airport`);
+  console.log(`  isolated airports (no flights): ${airports.filter((a) => a.isolated).length}`);
+  console.log(`  regional airports (single roster airline): ${airports.filter((a) => a.regional).length}`);
 }
 
 buildDb().catch((err) => {
