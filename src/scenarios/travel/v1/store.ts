@@ -3,7 +3,7 @@ import { fileURLToPath } from 'url';
 import type { Flight, Airport, City } from '../types/index.js';
 import { getDatabase, openDatabase } from '../../../core/db.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __dirname = path.dirname(fileURLToPath(import.meta.url)); // FIXME: "You need to set the output format to "esm" for "import.meta" to work correctly."
 const TRAVEL_DIR = path.resolve(__dirname, '..');
 
 export class TravelStore {
@@ -28,7 +28,7 @@ export class TravelStore {
   async getAirports(): Promise<Airport[]> {
     const db = await this.ensureDatabase();
 
-    const stmt = db.prepare('SELECT iata, name, city, country FROM airports');
+    const stmt = db.prepare('SELECT iata, name, city, country, countryCode FROM airports');
     const airports: Airport[] = [];
 
     while (stmt.step()) {
@@ -38,6 +38,7 @@ export class TravelStore {
         name: row.name as string,
         city: row.city as string,
         country: row.country as string,
+        countryCode: row.countryCode as string,
       });
     }
     stmt.free();
@@ -48,7 +49,7 @@ export class TravelStore {
   async getCities(): Promise<City[]> {
     const db = await this.ensureDatabase();
 
-    const stmt = db.prepare('SELECT DISTINCT city, country FROM airports');
+    const stmt = db.prepare('SELECT DISTINCT city, country, countryCode FROM airports');
     const cities: City[] = [];
 
     while (stmt.step()) {
@@ -56,6 +57,7 @@ export class TravelStore {
       cities.push({
         name: row.city as string,
         country: row.country as string,
+        countryCode: row.countryCode as string,
       });
     }
     stmt.free();

@@ -11,16 +11,29 @@
   - This project claims **no responsibility for information correctness**
 - **All generated flight data is mocked**, there's no correlation to any real past, present or future flight.
 
+## Validations
+
+Pay attention to scenario constraints:
+
+- IATA codes as primary keys, not UUIDs;
+- Distances in kilometers;
+- Flight "numbers" may have letters;
+- IATA and ICAO codes are not similar or substrings;
+- Dates and times are local, with UTC offset shown;
+- Unicode characters;
+- Layovers - a route may take many flights until destination;
+- Arrival dates advancing a day or more;
+
 ## Edge Cases
 
 In advanced scenarios, look out for:
 
 - Cities with the same name, same country;
-- IATA and ICAO codes are not similar;
 - UTC Offsets can be decimal (half-hours, quarter-hours);
-- Unicode characters;
-- Arrival dates advancing a day or more;
 - Arrival dates regressing a day;
+- Classes of seats;
+- Alternative currencies;
+- Zero seats in a class;
 
 ## SQLite Build
 
@@ -28,12 +41,10 @@ In advanced scenarios, look out for:
 into `travel.sqlite` (checked in, alongside the CSVs it's derived from). Tables:
 
 - `airports` — one row per airport CSV row, keyed by IATA code (ICAO is unique-indexed).
-- `airlines` — both fictional and real rosters in one table, keyed by IATA code
-  (ICAO unique-indexed), flagged by `is_real`.
-- `airport_airlines` — assumed airline coverage per airport (not sourced from anywhere
-  real). Each airport is linked to 3-10 fictional airlines (the project default roster),
-  with busier airports (by `passengers_monthly`) getting more coverage. Assignment is
-  deterministic (seeded per airport IATA code), so rebuilding the db is reproducible.
+- `airlines` — both fictional and real rosters in one table, keyed by IATA code (ICAO unique-indexed), flagged by `is_real`.
+- `airport_airlines` — assumed airline coverage per airport (not sourced from anywhere real).
+  - Each airport is linked to 3-10 airlines, with busier airports (by `passengers_monthly`) getting more coverage.
+  - Assignment is deterministic, so rebuilding the database is reproducible.
 
 ## References
 

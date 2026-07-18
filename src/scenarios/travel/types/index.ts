@@ -1,24 +1,77 @@
-export interface Airport {
-  iata: string;
-  name: string;
-  city: string;
-  country: string;
-}
-
 export interface City {
   name: string;
   country: string;
+  countryCode: string;
+}
+
+export interface Airport {
+  iata: string;
+  icao: string;
+  name: string;
+  city: string;
+  country: string;
+  countryCode: string;
+  utcOffset: number;
+  lat: number;
+  long: number;
+}
+
+export interface Airline {
+  iata: string;
+  icao: string;
+  name: string;
+  country: string;
+  countryCode: string;
+}
+
+export interface Pricing {
+  currency: string;
+  regular: number;
+  economy?: number;
+  businessClass?: number;
+  firstClass?: number;
+}
+
+export interface Seats {
+  regular: number;
+  economy?: number;
+  businessClass?: number;
+  firstClass?: number;
 }
 
 export interface Flight {
   id: string;
-  from: string;
-  to: string;
-  date: string;
-  departure: string;
-  arrival: string;
+  flightTimeHours: number;
+  flightDistanceKms: number;
+  departure: {
+    timestamp: string;
+    airport: string;
+  },
+  arrival: {
+    timestamp: string;
+    airport: string;
+  },
   airline: string;
+  plane: string;
   flightNumber: string;
-  price: number;
+  pricing: [Pricing];
   available: number;
+  seats: [Seats];
+}
+
+export interface Route {
+  id: string;
+  flightTimeHours: number;
+  flightDistanceKms: number;
+  departure: {
+    timestamp: string;
+    airport: string;
+  },
+  arrival: {
+    timestamp: string;
+    airport: string;
+  },
+  flights: [Flight];
+  available: number;
+  pricing: [Pricing];
 }

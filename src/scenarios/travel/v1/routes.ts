@@ -27,10 +27,7 @@ const searchFlightsSchema = {
     200: {
       type: 'object',
       properties: {
-        from: { type: 'string' },
-        to: { type: 'string' },
-        date: { type: 'string' },
-        flights: {
+        routes: {
           type: 'array',
           items: {
             type: 'object',
