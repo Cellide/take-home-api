@@ -77,19 +77,19 @@ export const flightSchema = {
     airline: { type: 'string', description: 'Airline code IATA' },
     plane: { type: 'string', description: 'Manufacturer and Model of plane' },
     flightNumber: { type: 'string', description: 'Flight Number' },
-    pricing: [{
+    pricing: {
       type: 'array',
       items: {
         $ref: '#/components/schemas/Pricing',
       },
-    }];
+    },
     available: { type: 'number', description: 'Quantity of available seats' },
-    seats: [{
+    seats: {
       type: 'array',
       items: {
         $ref: '#/components/schemas/Seats',
       },
-    }];
+    },
   },
 };
 
@@ -108,12 +108,12 @@ export const routeSchema = {
       timestamp: { type: 'string', description: 'Arrival timestamp (YYYY-MM-DD HH:MM UTC+X)' },
       airport: { type: 'string', description: 'Arrival airport code IATA' },
     },
-    pricing: [{
+    pricing: {
       type: 'array',
       items: {
         $ref: '#/components/schemas/Pricing',
       },
-    }];
+    },
     available: { type: 'number', description: 'Quantity of available seats' },
   },
 };

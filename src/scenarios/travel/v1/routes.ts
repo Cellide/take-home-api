@@ -5,6 +5,7 @@ import { generateFlights } from './generator.js';
 import { TravelStore } from './store.js';
 import { logFlow } from '../../../core/logger.js';
 import type { Flight, Airport, City } from '../types/index.js';
+import { citySchema, airportSchema } from '../types/openapi.js';
 
 const CACHE_TTL = 3600;
 const LARGE_CACHE_TTL = 3600 * 24;
@@ -84,15 +85,7 @@ const listAirportsSchema = {
       properties: {
         airports: {
           type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              iata: { type: 'string' },
-              name: { type: 'string' },
-              city: { type: 'string' },
-              country: { type: 'string' },
-            },
-          },
+          items: airportSchema,
         },
       },
     },
@@ -106,13 +99,7 @@ const listCitiesSchema = {
       properties: {
         cities: {
           type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              name: { type: 'string' },
-              country: { type: 'string' },
-            },
-          },
+          items: citySchema,
         },
       },
     },
@@ -161,7 +148,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
         from,
         to,
         date,
-        flights: flightsData,
+        routes: flightsData,
       };
     },
   );
@@ -209,7 +196,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
         reqId: request.id,
         flow: 'flight-detail',
         step: 'found',
-        data: { id, airline: flight.airline, price: flight.price },
+        data: { id, airline: flight.airline },
       });
 
       return flight;
@@ -286,7 +273,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
         });
       }
 
-      return { airports };
+      return { cities };
     },
   );
 }
