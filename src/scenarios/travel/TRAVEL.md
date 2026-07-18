@@ -38,8 +38,7 @@ In advanced scenarios, look out for:
 
 ## SQLite Build
 
-`npm run db:build:travel` parses `airports.csv`, `fictional_airlines.csv`, and `real_airlines.csv`
-into `travel.sqlite` (checked in, alongside the CSVs it's derived from). Tables:
+`npm run db:build:travel` parses `airports.csv`, `fictional_airlines.csv`, and `real_airlines.csv` into `travel.sqlite` (checked in, alongside the CSVs it's derived from). Tables:
 
 - `airports` — one row per airport CSV row, keyed by IATA code (ICAO is unique-indexed).
 - `airlines` — both fictional and real rosters in one table, keyed by IATA code (ICAO unique-indexed), flagged by `is_real`.
@@ -49,6 +48,4 @@ into `travel.sqlite` (checked in, alongside the CSVs it's derived from). Tables:
 
 ## References
 
-Airports information: https://www.world-airport-codes.com/alphabetical/airport-code
-Airlines information: https://en.wikipedia.org/wiki/Lists_of_airlines
-Biggest airports by passengers information: https://www.bigairports.com/data/
+Airports information: https://www.world-airport-codes.com/alphabetical/airport-code Airlines information: https://en.wikipedia.org/wiki/Lists_of_airlines Biggest airports by passengers information: https://www.bigairports.com/data/

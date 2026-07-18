@@ -2,8 +2,7 @@
 
 ## Reporting Security Vulnerabilities
 
-We take the security of the Take Home API seriously. If you discover a security vulnerability, **we encourage you to submit a public GitHub issue**.
-An alternate, private channel is `security at cellide dot com`.
+We take the security of the Take Home API seriously. If you discover a security vulnerability, **we encourage you to submit a public GitHub issue**. An alternate, private channel is `security at cellide dot com`.
 
 Since this is a public repository and many people may rely on it, security problems should be known, understood and patched as soon as possible.
 
