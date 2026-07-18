@@ -29,6 +29,7 @@ Pay attention to scenario constraints:
 In advanced scenarios, look out for:
 
 - Cities with the same name, same country;
+- Official country codes are not always intuitive;
 - UTC Offsets can be decimal (half-hours, quarter-hours);
 - Arrival dates regressing a day;
 - Classes of seats;

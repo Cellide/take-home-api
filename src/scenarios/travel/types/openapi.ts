@@ -10,7 +10,7 @@ export const citySchema = {
 
 export const airportSchema = {
   type: 'object',
-  required: ['iata', 'icao', 'name', 'city', 'country', 'countryCode', 'utcOffset', 'lat', 'long'],
+  required: ['iata', 'name', 'city', 'country', 'countryCode'],
   properties: {
     iata: { type: 'string', description: 'Airport code IATA' },
     icao: { type: 'string', description: 'Airport code ICAO' },
