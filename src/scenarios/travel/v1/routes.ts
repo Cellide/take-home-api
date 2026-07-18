@@ -121,7 +121,7 @@ const listCitiesSchema = {
 
 export async function registerRoutes(app: FastifyInstance): Promise<void> {
   app.get<{ Querystring: { from: string; to: string; date: string } }>(
-    '/api/travel/v1/flights',
+    '/api/travel/v1/search',
     {
       schema: searchFlightsSchema,
     },

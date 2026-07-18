@@ -14,7 +14,7 @@ export const travelV1: Scenario = {
     return {
       '/api/travel/v1/airports': airportsParameters,
       '/api/travel/v1/cities': citiesParameters,
-      '/api/travel/v1/flights': searchFlightsParameters,
+      '/api/travel/v1/search': searchFlightsParameters,
     };
   },
 };

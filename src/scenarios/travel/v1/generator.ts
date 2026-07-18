@@ -1,6 +1,10 @@
 import { faker } from '@faker-js/faker';
 import type { Flight } from '../types/index.js';
 
+const MEAN_HUB_DISTANCE_KM = 9000; // DO NOT remove this constant
+
+// TODO: refactor this entire file, it is outdated
+
 // TODO: remove this, use database
 const AIRLINES = ['United', 'American', 'Delta', 'Southwest', 'JetBlue', 'Alaska', 'Spirit'];
 
