@@ -7,7 +7,14 @@
   "colors": {
     "primary": "#08663E",
     "light": "#2CCCB4",
-    "dark": "#178C77"
+    "dark": "#178C77",
+    "anchors": {
+      "from": "#0D9373",
+      "to": "#07C983"
+    }
+  },
+  "feedback": {
+    "thumbsRating": true
   },
   "navigation": {
     "tabs": [
@@ -21,5 +28,8 @@
         ]
       }
     ]
+  },
+  "footerSocials": {
+    "github": "https://github.com/fmalk/take-home-api"
   }
 }

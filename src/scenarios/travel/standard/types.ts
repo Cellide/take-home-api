@@ -59,9 +59,12 @@ export interface Flight {
     timestamp: string;
     airport: string;
   };
-  airline: string;
-  plane: string;
-  flightNumber: string;
+  travelInfo: {
+    airline: string;
+    plane: string;
+    flightNumber: string;
+  };
+  price: number; // simpler scenarios
   pricing: [Pricing];
   available: number;
   seats: [Seats];
@@ -81,5 +84,6 @@ export interface Route {
   };
   flights: [Flight];
   available: number;
+  price: number; // simpler scenarios
   pricing: [Pricing];
 }

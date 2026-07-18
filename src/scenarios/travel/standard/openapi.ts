@@ -69,12 +69,8 @@ export const flightSchema = {
     'flightDistanceKms',
     'departure',
     'arrival',
-    'airline',
-    'plane',
-    'flightNumber',
-    'pricing',
+    'travelInfo',
     'available',
-    'seats',
   ],
   properties: {
     id: { type: 'string', description: 'Unique Flight identifier' },
@@ -88,9 +84,12 @@ export const flightSchema = {
       timestamp: { type: 'string', description: 'Arrival timestamp (YYYY-MM-DD HH:MM UTC+X)' },
       airport: { type: 'string', description: 'Arrival airport code IATA' },
     },
-    airline: { type: 'string', description: 'Airline code IATA' },
-    plane: { type: 'string', description: 'Manufacturer and Model of plane' },
-    flightNumber: { type: 'string', description: 'Flight Number' },
+    travelInfo: {
+      airline: { type: 'string', description: 'Airline code IATA' },
+      plane: { type: 'string', description: 'Manufacturer and Model of plane' },
+      flightNumber: { type: 'string', description: 'Flight Number' },
+    },
+    price: { type: 'number', description: 'Price in USD' },
     pricing: {
       type: 'array',
       items: {
@@ -122,6 +121,7 @@ export const routeSchema = {
       timestamp: { type: 'string', description: 'Arrival timestamp (YYYY-MM-DD HH:MM UTC+X)' },
       airport: { type: 'string', description: 'Arrival airport code IATA' },
     },
+    price: { type: 'number', description: 'Price in USD' },
     pricing: {
       type: 'array',
       items: {
@@ -129,6 +129,12 @@ export const routeSchema = {
       },
     },
     available: { type: 'number', description: 'Quantity of available seats' },
+    flights: {
+      type: 'array',
+      items: {
+        $ref: '#/components/schemas/Flight',
+      },
+    },
   },
 };
 
