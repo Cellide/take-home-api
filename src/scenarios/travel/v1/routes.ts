@@ -5,7 +5,14 @@ import {
   baseListAirportsSchema,
   baseListCitiesSchema,
 } from '../types/openapi.js';
-import { searchFlights, getFlightDetail, listAirports, listCities } from './controller.js';
+import {
+  searchFlights,
+  getFlightDetail,
+  listAirports,
+  listCities,
+  type SearchFlightsQuery,
+  type FlightIdParams,
+} from './controller.js';
 
 // v1 schemas are the shared base as-is today; spread/override here if this
 // version ever needs route-specific validation or response tweaks.
@@ -15,7 +22,7 @@ const listAirportsSchema = { ...baseListAirportsSchema };
 const listCitiesSchema = { ...baseListCitiesSchema };
 
 export async function registerRoutes(app: FastifyInstance): Promise<void> {
-  app.get<{ Querystring: { from: string; to: string; date: string } }>(
+  app.get<{ Querystring: SearchFlightsQuery }>(
     '/api/travel/v1/search',
     {
       schema: searchFlightsSchema,
@@ -23,7 +30,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     searchFlights,
   );
 
-  app.get<{ Params: { id: string } }>(
+  app.get<{ Params: FlightIdParams }>(
     '/api/travel/v1/flights/:id',
     {
       schema: flightDetailSchema,

@@ -43,7 +43,7 @@ domain it covers — not by difficulty:
 /api/travel/v4 → aimed at a deeper understanding of real-world edge cases and complex data management
 ```
 
-Every scenario ships with an OpenAPI/Swagger spec and seed data. Cache storage can remember sessions for a limited time, to allow real, stateful data: shop carts, temporary reserved seats, date restrictions.
+Every scenario ships with an OpenAPI/Swagger spec and a set of static reference data (cities, airports, plane types, etc.); transactional data (flights, bookings, prices) is generated on-the-fly per request. Cache storage can remember sessions for a limited time, to allow real, stateful data: shop carts, temporary reserved seats, date restrictions.
 
 ## Getting started
 

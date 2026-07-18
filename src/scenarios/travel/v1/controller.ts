@@ -13,9 +13,24 @@ const NAMESPACE = `${SCENARIO}:v1`;
 
 const store = new TravelStore();
 
-export async function searchFlights(
-  request: FastifyRequest<{ Querystring: { from: string; to: string; date: string } }>,
-): Promise<{ from: string; to: string; date: string; routes: Flight[] }> {
+export interface SearchFlightsQuery {
+  from: string;
+  to: string;
+  date: string;
+}
+
+export interface FlightIdParams {
+  id: string;
+}
+
+export type SearchFlightsRequest = FastifyRequest<{ Querystring: SearchFlightsQuery }>;
+export type FlightDetailRequest = FastifyRequest<{ Params: FlightIdParams }>;
+
+export interface SearchFlightsResult extends SearchFlightsQuery {
+  routes: Flight[];
+}
+
+export async function searchFlights(request: SearchFlightsRequest): Promise<SearchFlightsResult> {
   const { from, to, date } = request.query;
 
   logFlow({
@@ -55,7 +70,7 @@ export async function searchFlights(
   };
 }
 
-export async function getFlightDetail(request: FastifyRequest<{ Params: { id: string } }>): Promise<Flight> {
+export async function getFlightDetail(request: FlightDetailRequest): Promise<Flight> {
   const { id } = request.params;
 
   logFlow({

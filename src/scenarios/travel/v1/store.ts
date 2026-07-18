@@ -1,5 +1,6 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
+import type { Database } from 'sql.js';
 import type { Flight, Airport, City } from '../types/index.js';
 import { getDatabase, openDatabase } from '../../../core/db.js';
 
@@ -9,7 +10,7 @@ const TRAVEL_DIR = path.resolve(__dirname, '..');
 export class TravelStore {
   constructor() {}
 
-  private async ensureDatabase() {
+  private async ensureDatabase(): Promise<Database> {
     let db = getDatabase('travel');
     if (!db) {
       db = await openDatabase(TRAVEL_DIR, 'travel');

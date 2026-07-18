@@ -56,7 +56,9 @@ upgrade to SaaS.
 
 **Keep the OSS version complete — do not cripple it.** `docker run yourproject`
 should immediately give: the fully-working reference API, an easy-to-follow
-use-case flow, Swagger/OpenAPI docs, seed data, automatic reset, and a README.
+use-case flow, Swagger/OpenAPI docs, seed data (static reference vocab like
+cities/airports; transactional data is generated on request — see `CLAUDE.md`),
+automatic reset, and a README.
 The value is a realistic API you can consume right away.
 
 ### Offerings (not a split — same product, different delivery)
@@ -80,7 +82,8 @@ Example domains: e-commerce, airline booking, food delivery, banking ledger,
 show tickets, appointments.
 
 Each scenario provides: a set of endpoints, a data model, business rules and
-use-case flows, an OpenAPI/Swagger spec, and seed data — everything needed to
+use-case flows, an OpenAPI/Swagger spec, and seed data (its static reference
+vocabulary — cities, airport/airline codes, etc.) — everything needed to
 *consume* the API.
 
 **Versioned by API surface within the same business domain.** The version number
@@ -115,6 +118,11 @@ explicitly *out of scope* — see "Out of scope" below.
   thorough, structured logs of every request/response and use-case flow. These
   logs are what a future evaluation layer would consume, so they matter from
   day one.
+- **Composition-first TypeScript.** Since scenarios share most of their API
+  shape (schemas, request/response types) across versions, define the shared
+  piece once per scenario and compose per-version overrides with spread,
+  generics, and utility types (`Partial`/`Pick`/`Omit`) rather than duplicating
+  it per version. Full policy lives in `CLAUDE.md`.
 
 ### Out of scope (a future project that *consumes* this one)
 
