@@ -1,11 +1,12 @@
 iata,icao,airline,country,country_code,low_cost,first_class,business_class,loyalty
-AI,ADD,Addis Airlines,Ethiopia,ET,0,0,1,1
+EI,ADD,Addis Airlines,Ethiopia,ET,0,0,1,1
 NA,NLA,Nelson Airways,South Africa,ZA,0,0,0,1
 SN,SNA,Sun&Air,Egypt,EG,0,0,0,1
 KI,AIK,Air Kinshasa,Democratic Republic of the Congo,CD,0,0,0,0
 ZZ,ZZZ,Air Cool,Nigeria,NG,0,0,0,0
 RC,ROC,Royal Casablanca,Morocco,MA,0,0,1,1
 CN,NAR,China National Aviation,China,CN,0,0,1,1
+JR,JRD,JRD Airlines,India,IN,0,0,1,1
 6I,IND,Bharat Blue Airlines,India,IN,0,0,0,1
 MB,MAB,Malaysia Bhd,Malaysia,MY,1,0,0,0
 DH,DHA,Doha Airways,Qatar,QA,0,1,1,1
