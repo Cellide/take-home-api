@@ -283,7 +283,7 @@ export const flightResultSchema = {
   },
 };
 
-// Self-contained (no $ref) shape actually produced by findRoutes/generator.ts, used for the
+// Self-contained (no $ref) shape actually produced by findDirectFlights + groupRoutes/generator.ts, used for the
 // search response so fastify's serializer doesn't strip the real route/flight fields down to
 // the old flat `flightResultSchema` shape.
 const routeResultFlightSchema = {

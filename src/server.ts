@@ -1,7 +1,6 @@
 import Fastify, { FastifyInstance, FastifyRequest, LogController } from 'fastify';
 import fastifyCors from '@fastify/cors';
 import fastifySwagger from '@fastify/swagger';
-import fastifySwaggerUi from '@fastify/swagger-ui';
 import { randomUUID } from 'crypto';
 import { getLogger, logRequest } from './core/logger';
 import { ApiError } from './types';
@@ -36,10 +35,6 @@ export async function buildServer(): Promise<FastifyInstance> {
         version: '0.1.0', // TODO: load from package.json
       },
     },
-  });
-
-  await app.register(fastifySwaggerUi, {
-    routePrefix: '/swagger',
   });
 
   app.addHook('onRequest', async (request: FastifyRequest) => {

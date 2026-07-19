@@ -25,11 +25,11 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "http://localhost:3000/swagger",
+          "raw": "http://localhost:3000/api/travel/v1/swagger",
           "protocol": "http",
           "host": ["localhost"],
           "port": "3000",
-          "path": ["swagger"]
+          "path": ["api", "travel", "v1", "swagger"]
         }
       },
       "response": []
@@ -55,11 +55,11 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "http://localhost:3000/api/travel/v1/airports",
+          "raw": "http://localhost:3000/api/travel/v1/cities",
           "protocol": "http",
           "host": ["localhost"],
           "port": "3000",
-          "path": ["api", "travel", "v1", "airports"]
+          "path": ["api", "travel", "v1", "cities"]
         }
       },
       "response": []

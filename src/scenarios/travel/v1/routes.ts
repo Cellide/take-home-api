@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import fastifySwaggerUi from '@fastify/swagger-ui';
 import {
   baseSearchFlightsSchema,
   baseFlightDetailSchema,
@@ -14,6 +15,7 @@ import {
   type SearchFlightsQuery,
   type FlightIdParams,
 } from './controller.js';
+import { servePostmanCollection } from '../../../utils/postman-handler.js';
 
 // v1 schemas are the shared base as-is today; spread/override here if this
 // version ever needs route-specific validation or response tweaks.
@@ -34,6 +36,21 @@ const listAirportsSchema = {
 const listCitiesSchema = { ...baseListCitiesSchema };
 
 export async function registerRoutes(app: FastifyInstance): Promise<void> {
+  // Register Swagger UI for this scenario/version
+  await app.register(fastifySwaggerUi, {
+    routePrefix: '/api/travel/v1/swagger',
+    uiConfig: {
+      deepLinking: true,
+    },
+  });
+
+  app.get(
+    '/api/travel/v1/postman',
+    async (request, reply) => {
+      await servePostmanCollection('travel/v1', request, reply);
+    },
+  );
+
   app.get<{ Querystring: SearchFlightsQuery }>(
     '/api/travel/v1/search',
     {
