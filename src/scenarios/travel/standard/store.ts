@@ -1,12 +1,15 @@
 import path from 'path';
-import { fileURLToPath } from 'url';
 import type { Database } from 'sql.js';
 import type { Flight, Airport, City, Airline } from './types.js';
 import { getDatabase, openDatabase } from '../../../core/db.js';
 import { getEnvBool } from '../../../config/env.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const TRAVEL_DIR = path.resolve(__dirname, '..');
+// Resolved relative to process.cwd(), not import.meta.url: when esbuild bundles this
+// module into a single dist/index.js, import.meta.url points at the bundle's own location
+// (dropping the original src/ path), not this file's real path. The Dockerfile already
+// assumes cwd-relative resolution — it copies travel.sqlite to src/scenarios/travel/
+// alongside dist/, both anchored at WORKDIR /app.
+const TRAVEL_DIR = path.resolve(process.cwd(), 'src/scenarios/travel');
 
 // Fixed for the process lifetime, not a per-request option: whether flight/airline data
 // draws from real-world airlines (real_airlines.csv) or only the fictional roster

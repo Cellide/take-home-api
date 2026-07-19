@@ -1,9 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
 export async function servePostmanCollection(
   scenarioFolder: string,
@@ -11,7 +8,10 @@ export async function servePostmanCollection(
   reply: FastifyReply,
 ): Promise<void> {
   try {
-    const collectionPath = join(__dirname, '..', 'scenarios', scenarioFolder, 'postman_collection.json');
+    // Resolved relative to process.cwd(), not import.meta.url: esbuild bundles this module
+    // into dist/index.js, so import.meta.url would point at the bundle's location instead
+    // of this file's real path — see src/scenarios/travel/standard/store.ts for the same fix.
+    const collectionPath = join(process.cwd(), 'src', 'scenarios', scenarioFolder, 'postman_collection.json');
     const collection = JSON.parse(readFileSync(collectionPath, 'utf-8'));
     reply.header('Content-Type', 'application/json');
     reply.send(collection);
