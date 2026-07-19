@@ -324,6 +324,22 @@ function bridgeIsolatedHubClusters(db: Database, insertLink: Statement, hubs: Ai
   }
 }
 
+// Stage 2d - Trans-Pacific override: Honolulu sits just past every headquarters' nonstop range
+// (Tokyo is the closest at ~6200km, just over MAX_HUB_RANGE_KM), so Stage 2c's general bridging
+// connects it via the mainland US instead. A Hawaii-Japan route is a real, important Pacific
+// crossing though, so explicitly add Japan's own premium airlines to HNL on top of that bridge —
+// deliberately narrower than a range-based fix, which would also pull in several unrelated
+// long-haul pairs elsewhere in the 6000-6500km band.
+function linkJapanToHonolulu(insertLink: Statement, airports: AirportRow[], roster: AirlineRow[]): void {
+  const hnl = airports.find((a) => a.iata === 'HNL' && a.distanceHub);
+  if (!hnl) return;
+
+  const japaneseBusinessAirlines = roster.filter((a) => a.countryCode === 'JP' && (a.businessClass || a.firstClass));
+  for (const airline of japaneseBusinessAirlines) {
+    insertLink.run({ ':airport_iata': hnl.iata, ':airline_iata': airline.iata, ':regional': 0 });
+  }
+}
+
 // Every hub must be reachable from every other hub via some sequence of shared-airline legs
 // (changing airlines between legs is fine) — otherwise a hub-to-hub route would be
 // impossible to construct. This is a build-time safety net, not a fix: if it throws, the CSV
@@ -483,6 +499,11 @@ function linkAirportsToAirlines(
   // Stage 2c
   const hubs = linkableAirports.filter((a) => a.distanceHub);
   bridgeIsolatedHubClusters(db, insertLink, hubs);
+
+  // Stage 2d
+  linkJapanToHonolulu(insertLink, linkableAirports, fictionalAirlines);
+  linkJapanToHonolulu(insertLink, linkableAirports, realAirlines);
+
   assertHubGraphConnected(db, hubs);
 
   // Stage 3

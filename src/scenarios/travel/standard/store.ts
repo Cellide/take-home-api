@@ -1,7 +1,7 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import type { Database } from 'sql.js';
-import type { Flight, Airport, City } from './types.js';
+import type { Flight, Airport, City, Airline } from './types.js';
 import { getDatabase, openDatabase } from '../../../core/db.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

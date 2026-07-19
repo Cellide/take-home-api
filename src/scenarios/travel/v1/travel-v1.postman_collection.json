@@ -12,13 +12,9 @@
         "url": {
           "raw": "http://localhost:3000/health",
           "protocol": "http",
-          "host": [
-            "localhost"
-          ],
+          "host": ["localhost"],
           "port": "3000",
-          "path": [
-            "health"
-          ]
+          "path": ["health"]
         }
       },
       "response": []
@@ -31,13 +27,9 @@
         "url": {
           "raw": "http://localhost:3000/swagger",
           "protocol": "http",
-          "host": [
-            "localhost"
-          ],
+          "host": ["localhost"],
           "port": "3000",
-          "path": [
-            "swagger"
-          ]
+          "path": ["swagger"]
         }
       },
       "response": []
@@ -50,16 +42,9 @@
         "url": {
           "raw": "http://localhost:3000/api/travel/v1/airports",
           "protocol": "http",
-          "host": [
-            "localhost"
-          ],
+          "host": ["localhost"],
           "port": "3000",
-          "path": [
-            "api",
-            "travel",
-            "v1",
-            "airports"
-          ]
+          "path": ["api", "travel", "v1", "airports"]
         }
       },
       "response": []
@@ -72,16 +57,9 @@
         "url": {
           "raw": "http://localhost:3000/api/travel/v1/airports",
           "protocol": "http",
-          "host": [
-            "localhost"
-          ],
+          "host": ["localhost"],
           "port": "3000",
-          "path": [
-            "api",
-            "travel",
-            "v1",
-            "airports"
-          ]
+          "path": ["api", "travel", "v1", "airports"]
         }
       },
       "response": []
@@ -94,16 +72,9 @@
         "url": {
           "raw": "http://localhost:3000/api/travel/v1/search?from=CNF&to=GRU&date=2026-11-20",
           "protocol": "http",
-          "host": [
-            "localhost"
-          ],
+          "host": ["localhost"],
           "port": "3000",
-          "path": [
-            "api",
-            "travel",
-            "v1",
-            "search"
-          ],
+          "path": ["api", "travel", "v1", "search"],
           "query": [
             {
               "key": "from",
