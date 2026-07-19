@@ -22,47 +22,47 @@ export function generateId(): string {
 }
 
 // `count` will gate how many routes are returned once multi-route/layover logic lands.
-export async function findRoutes(from: string, to: string, date: string, _count: number = 10): Promise<Route[]> {
+export async function findDirectFlights(from: string, to: string, date: string, _count: number = 10): Promise<Flight[]> {
   faker.seed(hashFlightQuery(from, to, date));
 
   // First pass: only path resolution. A direct flight is possible whenever an airline
-  // holds a regional airport_airlines edge at both `from` and `to`; one Route per airline.
+  // holds a regional airport_airlines edge at both `from` and `to`; one Flight per airline.
   const regionalAirlines = await store.getRegionalAirlines(from, to);
 
-  return regionalAirlines.map((airline) => {
-    const flight: Flight = {
-      id: generateId(),
-      flightTimeHours: 1,
-      flightDistanceKms: 100,
-      departure: {
-        timestamp: date,
-        airport: from,
-      },
-      arrival: {
-        timestamp: date,
-        airport: to,
-      },
-      travelInfo: {
-        airline: airline.iata,
-        plane: '',
-        flightNumber: '',
-      },
-      price: 0,
-      pricing: [{ currency: 'USD', regular: 0 }],
-      available: 0,
-      seats: [{ regular: 0 }],
-    };
+  return regionalAirlines.map((airline) => ({
+    id: generateId(),
+    flightTimeHours: 1,
+    flightDistanceKms: 100,
+    departure: {
+      timestamp: date,
+      airport: from,
+    },
+    arrival: {
+      timestamp: date,
+      airport: to,
+    },
+    travelInfo: {
+      airline: airline.iata,
+      plane: '',
+      flightNumber: '',
+    },
+    price: 0,
+    pricing: [{ currency: 'USD', regular: 0 }],
+    available: 0,
+    seats: [{ regular: 0 }],
+  }));
+}
 
-    return {
-      id: generateId(),
-      flightTimeHours: flight.flightTimeHours,
-      flightDistanceKms: flight.flightDistanceKms,
-      departure: flight.departure,
-      arrival: flight.arrival,
-      flights: [flight],
-      available: flight.available,
-      price: flight.price,
-      pricing: flight.pricing,
-    };
-  });
+export function groupRoutes(flights: Flight[]): Route[] {
+  return flights.map((flight) => ({
+    id: generateId(),
+    flightTimeHours: flight.flightTimeHours,
+    flightDistanceKms: flight.flightDistanceKms,
+    departure: flight.departure,
+    arrival: flight.arrival,
+    flights: [flight],
+    available: flight.available,
+    price: flight.price,
+    pricing: flight.pricing,
+  }));
 }
