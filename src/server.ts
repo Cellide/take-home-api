@@ -1,4 +1,4 @@
-import Fastify, { FastifyInstance, FastifyRequest } from 'fastify';
+import Fastify, { FastifyInstance, FastifyRequest, LogController } from 'fastify';
 import fastifyCors from '@fastify/cors';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
@@ -17,8 +17,10 @@ export async function buildServer(): Promise<FastifyInstance> {
   const app = Fastify({
     logger: false,
     requestIdHeader: 'x-request-id',
-    requestIdLogLabel: 'reqId',
-    disableRequestLogging: true,
+    logController: new LogController({
+      requestIdLogLabel: 'reqId',
+      disableRequestLogging: true,
+    }),
     genReqId: () => randomUUID(),
   });
 
