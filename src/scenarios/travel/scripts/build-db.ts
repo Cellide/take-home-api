@@ -8,6 +8,17 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TRAVEL_DIR = path.resolve(__dirname, '..');
 const DB_NAME = 'travel';
 
+// The longest range we treat as a plausible nonstop for a premium (first/business class)
+// widebody service. Pairs further apart than this are considered "too far" for the airline's
+// fleet to reach from its headquarters, even though both ends are hubs.
+const MAX_HUB_RANGE_KM = 6000;
+
+// Airports within this radius of a hub are close enough for that hub's premium airlines to
+// reach as a feeder route. An airport sitting between hubs picks up all.
+const REGULAR_AIRPORT_HUB_RADIUS_KM = 3500;
+
+const EARTH_RADIUS_KM = 6371;
+
 interface AirportRow {
   iata: string;
   icao: string;
@@ -112,8 +123,6 @@ function parseAirlines(filePath: string): AirlineRow[] {
  * The goal is to have a reproducible travel.sqlite DB with many possible, realistic routing.
  */
 
-const EARTH_RADIUS_KM = 6371;
-
 function haversineDistanceKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
   const toRad = (deg: number) => (deg * Math.PI) / 180;
   const dLat = toRad(b.lat - a.lat);
@@ -143,18 +152,20 @@ function levenshteinDistance(a: string, b: string): number {
 }
 
 // Groups two-column SQL result rows (e.g. `SELECT airport_iata, airline_iata FROM ...`) into a
-// Map from the first column to every second-column value seen with it.
+// Map from the first column to every distinct second-column value seen with it. Deduped because
+// airport_airlines' PK includes `regional`, so the same (airport, airline) pair can legitimately
+// appear twice — once as a regional edge, once as a non-regional one.
 function groupByFirstColumn(rows: [string, string][]): Map<string, string[]> {
-  const grouped = new Map<string, string[]>();
+  const grouped = new Map<string, Set<string>>();
   for (const [key, value] of rows) {
     const values = grouped.get(key);
     if (values) {
-      values.push(value);
+      values.add(value);
     } else {
-      grouped.set(key, [value]);
+      grouped.set(key, new Set([value]));
     }
   }
-  return grouped;
+  return new Map([...grouped].map(([key, values]) => [key, [...values]]));
 }
 
 // Stage 1 - domestic: every (non-isolated) airport is served by every airline headquartered in
@@ -173,11 +184,6 @@ function linkDomesticAirlines(insertLink: Statement, airports: AirportRow[], ros
   }
 }
 
-// The longest range we treat as a plausible nonstop for a premium (first/business class)
-// widebody service. Pairs further apart than this are considered "too far" for the airline's
-// fleet to reach from its headquarters, even though both ends are hubs.
-const MAX_HUB_RANGE_KM = 6000;
-
 // An airline's headquarters is deterministically the busiest airport in its home country,
 // preferring a distance hub if the country has one.
 function findAirlineHeadquarters(airports: AirportRow[], airline: AirlineRow): AirportRow | undefined {
@@ -191,13 +197,13 @@ function findAirlineHeadquarters(airports: AirportRow[], airline: AirlineRow): A
   }, undefined);
 }
 
-// Stage 2 - Hubs: hubs are also served by every BusinessClass/FirstClass airline, unless the hub
-// is out of nonstop range from the airline's headquarters. Not considered regional edges.
+// Stage 2 - Hubs: hubs are served by every BusinessClass airline, unless the hub is out of
+// nonstop range from the airline's headquarters. Not considered regional edges.
 function linkHubAirlines(insertLink: Statement, airports: AirportRow[], roster: AirlineRow[]): void {
   const hubs = airports.filter((a) => a.distanceHub);
-  const premiumAirlines = roster.filter((a) => a.firstClass || a.businessClass);
+  const businessAirlines = roster.filter((a) => a.businessClass);
 
-  for (const airline of premiumAirlines) {
+  for (const airline of businessAirlines) {
     const headquarters = findAirlineHeadquarters(airports, airline);
     if (!headquarters) continue;
 
@@ -209,53 +215,147 @@ function linkHubAirlines(insertLink: Statement, airports: AirportRow[], roster: 
   }
 }
 
-// FIXME: Refactor this logic, not every hub will connect to one another, MAX_HUB_RANGE_KM is now shorter.
-// Possible fix: check that every hub has at least another hub within MAX_HUB_RANGE_KM. At least one
-// non-regional airline should be shared among them.
+// Stage 2b - First class: FirstClass airlines are more exclusive than BusinessClass ones, and are
+// restricted to hubs in the airline's own home country only (no cross-border reach, no distance
+// check — home country hubs are all fair game regardless of how far apart they are).
+function linkFirstClassHubAirlines(insertLink: Statement, airports: AirportRow[], roster: AirlineRow[]): void {
+  const hubs = airports.filter((a) => a.distanceHub);
+  const firstClassAirlines = roster.filter((a) => a.firstClass);
 
-// Every pair of hubs must share at least one airline, or a hub-to-hub route would be
-// impossible to construct. Stage 2 links each airline independently by range from its own
-// headquarters, so nothing else guarantees two hubs stay mutually reachable — this is a
-// build-time safety net, not a fix: if it throws, the CSV data (or MAX_HUB_RANGE_KM) needs revisiting.
-function assertHubsFullyConnected(db: Database, hubs: AirportRow[]): void {
+  for (const airline of firstClassAirlines) {
+    const domesticHubs = hubs.filter((h) => h.countryCode === airline.countryCode);
+    for (const hub of domesticHubs) {
+      insertLink.run({ ':airport_iata': hub.iata, ':airline_iata': airline.iata, ':regional': 0 });
+    }
+  }
+}
+
+// Groups hubs into connected components given a hub-iata adjacency map, largest component first.
+function getConnectedComponents(hubs: AirportRow[], adjacency: Map<string, Set<string>>): AirportRow[][] {
+  const byIata = new Map(hubs.map((h) => [h.iata, h]));
+  const visited = new Set<string>();
+  const components: AirportRow[][] = [];
+
+  for (const start of hubs) {
+    if (visited.has(start.iata)) continue;
+
+    const component: AirportRow[] = [];
+    const queue = [start.iata];
+    visited.add(start.iata);
+
+    while (queue.length > 0) {
+      const currentIata = queue.shift()!;
+      const current = byIata.get(currentIata);
+      if (current) component.push(current);
+
+      for (const neighborIata of adjacency.get(currentIata) ?? []) {
+        if (!visited.has(neighborIata)) {
+          visited.add(neighborIata);
+          queue.push(neighborIata);
+        }
+      }
+    }
+    components.push(component);
+  }
+
+  return components.sort((a, b) => b.length - a.length);
+}
+
+// Builds the hub-to-hub adjacency implied by the current DB state: two hubs are adjacent if some
+// non-regional airline serves both.
+function getHubAdjacency(
+  db: Database,
+  hubs: AirportRow[],
+): { airlinesByHub: Map<string, string[]>; adjacency: Map<string, Set<string>> } {
   const rows = db.exec(`
-        SELECT aa.airline_iata, aa.airport_iata
+        SELECT aa.airport_iata, aa.airline_iata
         FROM airport_airlines aa
         JOIN airports a ON a.iata = aa.airport_iata
         WHERE a.distance_hub = 1 AND aa.regional = 0
     `);
+  const airlinesByHub = groupByFirstColumn((rows[0]?.values ?? []) as [string, string][]);
 
-  const hubsByAirline = groupByFirstColumn((rows[0]?.values ?? []) as [string, string][]);
-  const airlineHubLists = [...hubsByAirline.values()];
-
-  const uncoveredPairs: string[] = [];
-  for (let i = 0; i < hubs.length; i++) {
-    for (let j = i + 1; j < hubs.length; j++) {
-      const a = hubs[i].iata;
-      const b = hubs[j].iata;
-      const covered = airlineHubLists.some((served) => served.includes(a) && served.includes(b));
-      if (!covered) uncoveredPairs.push(`${a}-${b}`);
+  const hubsByAirline = new Map<string, string[]>();
+  for (const [hub, airlines] of airlinesByHub) {
+    for (const airline of airlines) {
+      const served = hubsByAirline.get(airline);
+      if (served) served.push(hub);
+      else hubsByAirline.set(airline, [hub]);
     }
   }
 
-  if (uncoveredPairs.length > 0) {
-    //throw new Error(
-    console.error(
-      `Stage 2 left ${uncoveredPairs.length} hub pair(s) with no shared airline (no possible route between them): ${uncoveredPairs.join(', ')}`,
+  const adjacency = new Map<string, Set<string>>(hubs.map((h) => [h.iata, new Set<string>()]));
+  for (const served of hubsByAirline.values()) {
+    for (const a of served) {
+      for (const b of served) {
+        if (a !== b) adjacency.get(a)?.add(b);
+      }
+    }
+  }
+
+  return { airlinesByHub, adjacency };
+}
+
+// Stage 2c - Hub bridging: some hubs (e.g. a remote island hub like HNL) may end up with no
+// in-range headquarters at all, leaving them disconnected from the rest of the hub network. Bridge
+// each disconnected cluster to the main one by sharing the closest main-cluster hub's airlines with
+// the closest hub in the isolated cluster, so every hub stays reachable from every other hub via
+// some sequence of shared-airline legs (changing airlines between legs is fine).
+function bridgeIsolatedHubClusters(db: Database, insertLink: Statement, hubs: AirportRow[]): void {
+  for (let i = 0; i < hubs.length; i++) {
+    const { airlinesByHub, adjacency } = getHubAdjacency(db, hubs);
+    const components = getConnectedComponents(hubs, adjacency);
+    if (components.length <= 1) return;
+
+    const [mainCluster, island] = components;
+
+    let bridge: { main: AirportRow; isolated: AirportRow; distance: number } | undefined;
+    for (const mainHub of mainCluster) {
+      for (const isolatedHub of island) {
+        const distance = haversineDistanceKm(mainHub, isolatedHub);
+        if (!bridge || distance < bridge.distance) bridge = { main: mainHub, isolated: isolatedHub, distance };
+      }
+    }
+    if (!bridge) return;
+
+    for (const airlineIata of airlinesByHub.get(bridge.main.iata) ?? []) {
+      insertLink.run({ ':airport_iata': bridge.isolated.iata, ':airline_iata': airlineIata, ':regional': 0 });
+    }
+  }
+}
+
+// Every hub must be reachable from every other hub via some sequence of shared-airline legs
+// (changing airlines between legs is fine) — otherwise a hub-to-hub route would be
+// impossible to construct. This is a build-time safety net, not a fix: if it throws, the CSV
+// data (or MAX_HUB_RANGE_KM) needs revisiting.
+function assertHubGraphConnected(db: Database, hubs: AirportRow[]): void {
+  const { adjacency } = getHubAdjacency(db, hubs);
+  const components = getConnectedComponents(hubs, adjacency);
+
+  if (components.length > 1) {
+    const clusters = components.map((c) => `[${c.map((h) => h.iata).join(', ')}]`).join(' vs. ');
+    throw new Error(
+      `Stage 2 left the hub network split into ${components.length} disconnected cluster(s): ${clusters}`,
     );
   }
 }
 
-// Airports within this radius of a hub are close enough for that hub's premium airlines to
-// reach as a feeder route. An airport sitting between hubs picks up all.
-const REGULAR_AIRPORT_HUB_RADIUS_KM = 3500;
-
 // Stage 3 - Regular airports: every non-hub, non-regional-flagged airport connects to every hub
-// within range, extending that hub's already-linked non-regional (premium) airlines out to it.
-// An airport with no hub in range still gets its single closest hub, so nothing is left
-// unreachable. Regional-flagged airports are deliberately out of scope here — Stage 1 already
-// gives them their one domestic airline, and any further reach is a later stage's call.
-function linkRegularAirportsToHubs(db: Database, insertLink: Statement, airports: AirportRow[]): void {
+// within range, extending that hub's already-linked non-regional (premium) airlines out to it —
+// but only the ones whose own headquarters is still within MAX_HUB_RANGE_KM of the regular
+// airport itself. Without that check, an airline that just barely reaches a hub (e.g. a North
+// American carrier reaching MAO) would leak into every regular airport near that hub too, even
+// ones much closer to a different hub the airline can't reach at all (e.g. CNF, right next to
+// GRU, inheriting American/Air Canada via the more distant MAO). An airport with no hub in range
+// still gets its single closest hub, so nothing is left unreachable. Regional-flagged airports are
+// deliberately out of scope here — Stage 1 already gives them their one domestic airline, and any
+// further reach is a later stage's call.
+function linkRegularAirportsToHubs(
+  db: Database,
+  insertLink: Statement,
+  airports: AirportRow[],
+  roster: AirlineRow[],
+): void {
   const hubs = airports.filter((a) => a.distanceHub);
   const regularAirports = airports.filter((a) => !a.distanceHub);
 
@@ -263,6 +363,11 @@ function linkRegularAirportsToHubs(db: Database, insertLink: Statement, airports
         SELECT airport_iata, airline_iata FROM airport_airlines WHERE regional = 0
     `);
   const airlinesByHub = groupByFirstColumn((hubLinkRows[0]?.values ?? []) as [string, string][]);
+
+  const airlinesByIata = new Map(roster.map((a) => [a.iata, a]));
+  const headquartersByIata = new Map(
+    roster.map((a) => [a.iata, findAirlineHeadquarters(airports, a)] as const).filter(([, hq]) => hq !== undefined),
+  );
 
   for (const airport of regularAirports) {
     const hubsByDistance = hubs
@@ -274,6 +379,11 @@ function linkRegularAirportsToHubs(db: Database, insertLink: Statement, airports
 
     for (const hub of targetHubs) {
       for (const airlineIata of airlinesByHub.get(hub.iata) ?? []) {
+        if (!airlinesByIata.has(airlineIata)) continue;
+
+        const headquarters = headquartersByIata.get(airlineIata);
+        if (!headquarters || haversineDistanceKm(headquarters, airport) > MAX_HUB_RANGE_KM) continue;
+
         // this will be considered a regional serving
         insertLink.run({ ':airport_iata': airport.iata, ':airline_iata': airlineIata, ':regional': 1 });
       }
@@ -342,26 +452,6 @@ function assertOnlyIsolatedAirportsUnserved(db: Database, airports: AirportRow[]
   }
 }
 
-// The mean distance from each non-hub airport to its nearest hub (distance_hub = true).
-// This is the "direct flight vs. layover through a hub" standard: below this distance,
-// treat a route as directly flyable; at or above it, prefer routing through the nearest hub.
-function computeMeanNearestHubDistanceKm(airports: AirportRow[]): number {
-  const hubs = airports.filter((a) => a.distanceHub);
-  const nonHubs = airports.filter((a) => !a.distanceHub);
-
-  let total = 0;
-  for (const airport of nonHubs) {
-    let nearest = Infinity;
-    for (const hub of hubs) {
-      const distance = haversineDistanceKm(airport, hub);
-      if (distance < nearest) nearest = distance;
-    }
-    total += nearest;
-  }
-
-  return nonHubs.length > 0 ? total / nonHubs.length : 0;
-}
-
 function linkAirportsToAirlines(
   db: Database,
   airports: AirportRow[],
@@ -378,8 +468,6 @@ function linkAirportsToAirlines(
   const normalAirports = linkableAirports.filter((a) => !a.regional);
   const regionalAirports = linkableAirports.filter((a) => a.regional);
 
-  const meanHubDistanceKm = computeMeanNearestHubDistanceKm(airports);
-
   // Stage 1
   linkDomesticAirlines(insertLink, linkableAirports, fictionalAirlines);
   linkDomesticAirlines(insertLink, linkableAirports, realAirlines);
@@ -387,13 +475,18 @@ function linkAirportsToAirlines(
   // Stage 2
   linkHubAirlines(insertLink, linkableAirports, fictionalAirlines);
   linkHubAirlines(insertLink, linkableAirports, realAirlines);
-  assertHubsFullyConnected(
-    db,
-    linkableAirports.filter((a) => a.distanceHub),
-  );
+
+  // Stage 2b
+  linkFirstClassHubAirlines(insertLink, linkableAirports, fictionalAirlines);
+  linkFirstClassHubAirlines(insertLink, linkableAirports, realAirlines);
+
+  // Stage 2c
+  const hubs = linkableAirports.filter((a) => a.distanceHub);
+  bridgeIsolatedHubClusters(db, insertLink, hubs);
+  assertHubGraphConnected(db, hubs);
 
   // Stage 3
-  linkRegularAirportsToHubs(db, insertLink, normalAirports);
+  linkRegularAirportsToHubs(db, insertLink, normalAirports, [...fictionalAirlines, ...realAirlines]);
 
   // Stage 4
   linkLastMileAirlines(db, insertLink, normalAirports, regionalAirports);
