@@ -90,7 +90,7 @@ function makeFlight(from: Airport, to: Airport, date: string, airline: Airline, 
     },
     travelInfo: {
       airline: airline.iata,
-      plane: `${aircraft.manufacturer} ${aircraft.model}`,
+      aircraft: `${aircraft.manufacturer} ${aircraft.model}`,
       flightNumber: makeFlightNumber(airline.iata),
     },
     price: 0,

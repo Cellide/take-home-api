@@ -78,7 +78,7 @@ export const flightSchema = {
     },
     travelInfo: {
       airline: { type: 'string', description: 'Airline code IATA' },
-      plane: { type: 'string', description: 'Manufacturer and Model of plane' },
+      aircraft: { type: 'string', description: 'Manufacturer and Model of aircraft' },
       flightNumber: { type: 'string', description: 'Flight Number' },
     },
     price: { type: 'number', description: 'Price in USD' },
@@ -311,7 +311,7 @@ const routeResultFlightSchema = {
       type: 'object',
       properties: {
         airline: { type: 'string' },
-        plane: { type: 'string' },
+        aircraft: { type: 'string' },
         flightNumber: { type: 'string' },
       },
     },
@@ -380,7 +380,7 @@ const flightDetailResponseSchema = {
       type: 'object',
       properties: {
         airline: { type: 'string' },
-        plane: { type: 'string' },
+        aircraft: { type: 'string' },
         flightNumber: { type: 'string' },
       },
     },

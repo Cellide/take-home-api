@@ -68,7 +68,7 @@ export interface Flight {
   };
   travelInfo: {
     airline: string;
-    plane: string;
+    aircraft: string;
     flightNumber: string;
   };
   price: number; // simpler scenarios
