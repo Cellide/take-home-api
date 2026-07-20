@@ -144,7 +144,7 @@ async function reduceToHub(
 // those as a "shortcut" and produce a single 12,000km+ leg. Prefer edges under MAX_HUB_HOP_KM;
 // only fall back to the unrestricted graph if that yields no path, so bridged clusters stay
 // reachable (just never picked over a shorter real alternative when one exists).
-const MAX_HUB_HOP_KM = 8000;
+const MAX_HUB_HOP_KM = 7000;
 
 // Hubs aren't necessarily linked pairwise — build-db.ts only guarantees every hub reaches
 // every other hub via *some* sequence of shared-airline legs (see its assertHubGraphConnected).
