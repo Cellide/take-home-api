@@ -286,12 +286,13 @@ export const flightResultSchema = {
 // Self-contained (no $ref) shape actually produced by findDirectFlights + groupRoutes/generator.ts, used for the
 // search response so fastify's serializer doesn't strip the real route/flight fields down to
 // the old flat `flightResultSchema` shape.
+// v1: flightTimeHours is formatted as HH:MM string; flightDistanceKms is integer.
 const routeResultFlightSchema = {
   type: 'object',
   properties: {
     id: { type: 'string' },
-    flightTimeHours: { type: 'number' },
-    flightDistanceKms: { type: 'number' },
+    flightTimeHours: { type: 'string', description: 'Flight time in HH:MM format' },
+    flightDistanceKms: { type: 'integer' },
     departure: {
       type: 'object',
       properties: {
@@ -323,8 +324,8 @@ const routeResultSchema = {
   type: 'object',
   properties: {
     id: { type: 'string' },
-    flightTimeHours: { type: 'number' },
-    flightDistanceKms: { type: 'number' },
+    flightTimeHours: { type: 'string', description: 'Flight time in HH:MM format' },
+    flightDistanceKms: { type: 'integer' },
     departure: routeResultFlightSchema.properties.departure,
     arrival: routeResultFlightSchema.properties.arrival,
     flights: {
@@ -354,10 +355,44 @@ export const baseSearchFlightsSchema = {
   },
 };
 
+// v1 flight detail schema: formatted times (HH:MM string) and rounded distance (integer)
+const flightDetailResponseSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    flightTimeHours: { type: 'string', description: 'Flight time in HH:MM format' },
+    flightDistanceKms: { type: 'integer' },
+    departure: {
+      type: 'object',
+      properties: {
+        timestamp: { type: 'string' },
+        airport: { type: 'string' },
+      },
+    },
+    arrival: {
+      type: 'object',
+      properties: {
+        timestamp: { type: 'string' },
+        airport: { type: 'string' },
+      },
+    },
+    travelInfo: {
+      type: 'object',
+      properties: {
+        airline: { type: 'string' },
+        plane: { type: 'string' },
+        flightNumber: { type: 'string' },
+      },
+    },
+    price: { type: 'number' },
+    available: { type: 'number' },
+  },
+};
+
 export const baseFlightDetailSchema = {
   params: flightIdParams,
   response: {
-    200: flightResultSchema,
+    200: flightDetailResponseSchema,
   },
 };
 
