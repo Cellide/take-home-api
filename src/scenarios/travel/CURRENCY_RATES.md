@@ -41,14 +41,19 @@ The fallback rates are reasonable approximations based on typical market rates:
 
 ### Usage in Code
 
-`src/scenarios/travel/standard/currency.ts` loads and caches this CSV in memory and exposes the
-conversion used by Route pricing (see `groupRoutes` in `generator.ts`):
+To use currency rates in the API:
 
 ```typescript
-import { convertFromUsd } from './currency.js';
+// Load rates from CSV
+const rates = parseCSV('currency_rates.csv');
 
-// rate_usd is "units of that currency per 1 USD", so converting FROM USD multiplies.
-const priceInEur = convertFromUsd(100, 'EUR'); // 92 (100 * 0.92)
+// Get rate for a currency
+const eurToUsd = rates['EUR']; // 0.92
+const usdToEur = 1 / rates['EUR']; // 1.087
+
+// Convert prices
+const priceInUsd = 100;
+const priceInEur = priceInUsd / rates['EUR']; // 91.3 EUR
 ```
 
 ## Notes
