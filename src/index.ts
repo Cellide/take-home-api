@@ -1,8 +1,8 @@
-import { loadConfig } from './config/env';
-import { initLogger, getLogger } from './core/logger';
-import { initCache } from './core/cache';
-import { buildServer } from './server';
-import { registerScenarios } from './scenarios/index';
+import { loadConfig } from './config/env.js';
+import { initLogger, getLogger } from './core/logger.js';
+import { initCache } from './core/cache.js';
+import { buildServer } from './server.js';
+import { registerScenarios } from './scenarios/index.js';
 
 async function main(): Promise<void> {
   try {
@@ -12,7 +12,7 @@ async function main(): Promise<void> {
 
     const app = await buildServer();
 
-    registerScenarios(app);
+    await registerScenarios(app);
 
     await app.listen({ port: config.PORT, host: config.HOST });
 

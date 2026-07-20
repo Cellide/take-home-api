@@ -1,11 +1,13 @@
 import type { FastifyRequest } from 'fastify';
 import { ApiError } from '../../../types/index.js';
 import { cacheKey, getCached, setCached } from '../../../core/cache.js';
-import { generateFlights } from './generator.js';
+import { findDirectFlights, findConnectingRoutes, applyTimeFlow, groupRoutes } from '../standard/generator.js';
 import { TravelStore } from '../standard/store.js';
+import { storeRoutes, getStoredFlight } from '../standard/instance-store.js';
 import { logFlow } from '../../../core/logger.js';
-import type { Flight, Airport, City } from '../standard/types.js';
-import type { V1Airport } from './types.js';
+import type { Flight, Route, Airport, City } from '../standard/types.js';
+import type { V1Airport, V1Flight, V1Route } from './types.js';
+import { formatFlight, formatRoute } from '../standard/formatters.js';
 
 const CACHE_TTL = 3600;
 const LARGE_CACHE_TTL = 3600 * 24;
@@ -33,7 +35,7 @@ export type SearchFlightsRequest = FastifyRequest<{ Querystring: SearchFlightsQu
 export type FlightDetailRequest = FastifyRequest<{ Params: FlightIdParams }>;
 
 export interface SearchFlightsResult extends SearchFlightsQuery {
-  routes: Flight[];
+  routes: V1Route[];
 }
 
 export async function searchFlights(request: SearchFlightsRequest): Promise<SearchFlightsResult> {
@@ -47,19 +49,22 @@ export async function searchFlights(request: SearchFlightsRequest): Promise<Sear
   });
 
   const cacheKeyVal = cacheKey(NAMESPACE, 'flights', from, to, date);
-  let flightsData = getCached<Flight[]>(cacheKeyVal);
+  let routesData = getCached<Route[]>(cacheKeyVal);
 
-  if (!flightsData) {
-    const generated = generateFlights(from, to, date, 5);
+  if (!routesData) {
+    const direct = await findDirectFlights(from, to, date, 5);
+    const sequences: Flight[][] = direct.length > 0 ? direct.map((f) => [f]) : await findConnectingRoutes(from, to, date);
+    const timed = await applyTimeFlow(sequences, date);
+    const generated = groupRoutes(timed);
     setCached(cacheKeyVal, generated, CACHE_TTL);
 
     logFlow({
       reqId: request.id,
       flow: 'flight-search',
       step: 'generated',
-      data: { count: generated.length },
+      data: { count: generated.length, direct: direct.length > 0 },
     });
-    flightsData = generated;
+    routesData = generated;
   } else {
     logFlow({
       reqId: request.id,
@@ -68,15 +73,20 @@ export async function searchFlights(request: SearchFlightsRequest): Promise<Sear
     });
   }
 
+  // Refresh the short-lived by-ID instance store on every access (cache hit or miss) so
+  // Flights/Routes shown in this response stay resolvable by ID (seat/price selection,
+  // flight detail) for the instance TTL from now, not just from when they were first generated.
+  storeRoutes(routesData);
+
   return {
     from,
     to,
     date,
-    routes: flightsData,
+    routes: routesData.map(formatRoute),
   };
 }
 
-export async function getFlightDetail(request: FlightDetailRequest): Promise<Flight> {
+export async function getFlightDetail(request: FlightDetailRequest): Promise<V1Flight> {
   const { id } = request.params;
 
   logFlow({
@@ -86,25 +96,9 @@ export async function getFlightDetail(request: FlightDetailRequest): Promise<Fli
     data: { id },
   });
 
-  const parts = id.split('-');
-  if (parts.length < 4) {
-    throw new ApiError(400, 'INVALID_FLIGHT_ID', 'Invalid flight ID format');
-  }
-
-  const from = parts[0].toUpperCase();
-  const to = parts[1].toUpperCase();
-  const date = parts.slice(2, -1).join('-');
-
-  const cacheKeyVal = cacheKey(NAMESPACE, 'flights', from, to, date);
-  let flightsData = getCached<Flight[]>(cacheKeyVal);
-
-  if (!flightsData) {
-    const generated = generateFlights(from, to, date, 5);
-    setCached(cacheKeyVal, generated, CACHE_TTL);
-    flightsData = generated;
-  }
-
-  const flight = store.getFlight(flightsData, id);
+  // Flights only live in the short-lived by-ID instance store (populated by searchFlights);
+  // there's no from/to/date to reconstruct a query from — the id carries no route info.
+  const flight = getStoredFlight(id);
 
   if (!flight) {
     throw new ApiError(404, 'FLIGHT_NOT_FOUND', 'Flight not found');
@@ -114,10 +108,10 @@ export async function getFlightDetail(request: FlightDetailRequest): Promise<Fli
     reqId: request.id,
     flow: 'flight-detail',
     step: 'lookup-found',
-    data: { id, airline: flight.airline },
+    data: { id, airline: flight.travelInfo.airline },
   });
 
-  return flight;
+  return formatFlight(flight);
 }
 
 export async function listAirports(request: FastifyRequest): Promise<{ airports: V1Airport[] }> {
