@@ -136,11 +136,21 @@ async function reduceToHub(
   return [{ hub: nearest.hub, edges: [edge] }];
 }
 
+// Hub-to-hub edges aren't distance-bounded the way departure/arrival legs are: build-db.ts
+// links a hub to any airline whose headquarters sits within MAX_HUB_RANGE_KM, so two hubs on
+// opposite sides of one HQ's range circle can end up ~2x that apart; on top of that, isolated
+// clusters (e.g. HNL) get one intentional long bridge edge with no distance check at all, just
+// to keep the hub graph connected. Left unfiltered, BFS-by-hop-count will happily ride one of
+// those as a "shortcut" and produce a single 12,000km+ leg. Prefer edges under MAX_HUB_HOP_KM;
+// only fall back to the unrestricted graph if that yields no path, so bridged clusters stay
+// reachable (just never picked over a shorter real alternative when one exists).
+const MAX_HUB_HOP_KM = 8000;
+
 // Hubs aren't necessarily linked pairwise — build-db.ts only guarantees every hub reaches
 // every other hub via *some* sequence of shared-airline legs (see its assertHubGraphConnected).
 // So "a path from starting Hub to destination Hub" can itself be multiple hub-to-hub hops;
 // find the shortest one with a plain BFS over the (small, ~17-node) hub graph.
-async function findHubPath(startHub: Airport, endHub: Airport): Promise<Airport[] | undefined> {
+async function findHubPath(startHub: Airport, endHub: Airport, maxHopKm?: number): Promise<Airport[] | undefined> {
   if (startHub.iata === endHub.iata) return [startHub];
 
   const visited = new Set([startHub.iata]);
@@ -153,6 +163,7 @@ async function findHubPath(startHub: Airport, endHub: Airport): Promise<Airport[
       const neighbors = await store.getReachableAirports(last.iata, { onlyHub: true });
       for (const neighbor of neighbors) {
         if (visited.has(neighbor.iata)) continue;
+        if (maxHopKm !== undefined && haversineKm(last, neighbor) > maxHopKm) continue;
         const nextPath = [...path, neighbor];
         if (neighbor.iata === endHub.iata) return nextPath;
         visited.add(neighbor.iata);
@@ -163,6 +174,10 @@ async function findHubPath(startHub: Airport, endHub: Airport): Promise<Airport[
   }
 
   return undefined;
+}
+
+async function findBestHubPath(startHub: Airport, endHub: Airport): Promise<Airport[] | undefined> {
+  return (await findHubPath(startHub, endHub, MAX_HUB_HOP_KM)) ?? findHubPath(startHub, endHub);
 }
 
 // Second pass: when no direct regional flight exists, build routes via a starting Hub and
@@ -194,7 +209,7 @@ export async function findConnectingRoutes(from: string, to: string, date: strin
         continue;
       }
 
-      const hubPath = await findHubPath(start.hub, end.hub);
+      const hubPath = await findBestHubPath(start.hub, end.hub);
       if (!hubPath) continue;
 
       const firstLegAirlines = await store.getConnectingAirlines(hubPath[0].iata, hubPath[1].iata);
