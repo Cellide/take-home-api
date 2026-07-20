@@ -71,7 +71,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     '/api/travel/v1/airports',
     {
       schema: listAirportsSchema,
-      onSend: (_request, reply) => {
+      onSend: async (_request, reply) => {
         reply.header('Cache-Control', 'public, max-age=86400');
       },
     },
@@ -82,7 +82,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     '/api/travel/v1/cities',
     {
       schema: listCitiesSchema,
-      onSend: (_request, reply) => {
+      onSend: async (_request, reply) => {
         reply.header('Cache-Control', 'public, max-age=86400');
       },
     },
