@@ -28,7 +28,7 @@ export interface ReachableAirportsOpts {
 }
 
 const AIRPORT_COLUMNS =
-  'iata, icao, name, city, country, country_code, utc_offset, lat, lng, distance_hub, regional, isolated';
+  'iata, icao, name, city, country, country_code, local_currency, utc_offset, lat, lng, distance_hub, regional, isolated';
 
 function rowToAirport(row: Record<string, unknown>): Airport {
   return {
@@ -38,6 +38,7 @@ function rowToAirport(row: Record<string, unknown>): Airport {
     city: row.city as string,
     country: row.country as string,
     countryCode: row.country_code as string,
+    localCurrency: row.local_currency as string,
     utcOffset: row.utc_offset as number,
     lat: row.lat as number,
     long: row.lng as number,

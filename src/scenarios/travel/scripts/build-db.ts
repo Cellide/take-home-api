@@ -26,6 +26,7 @@ interface AirportRow {
   city: string;
   country: string;
   countryCode: string;
+  localCurrency: string;
   passengersMonthly: number;
   lat: number;
   lng: number;
@@ -107,6 +108,7 @@ function parseAirports(filePath: string): AirportRow[] {
     distanceHub: r[10] === '1',
     isolated: r[11] === '1',
     regional: r[12] === '1',
+    localCurrency: r[13],
   }));
 }
 
@@ -558,6 +560,7 @@ async function buildDb(): Promise<void> {
             city TEXT NOT NULL,
             country TEXT NOT NULL,
             country_code TEXT NOT NULL,
+            local_currency TEXT NOT NULL,
             passengers_monthly REAL NOT NULL,
             lat REAL NOT NULL,
             lng REAL NOT NULL,
@@ -601,8 +604,8 @@ async function buildDb(): Promise<void> {
     `);
 
   const insertAirport = db.prepare(`
-        INSERT INTO airports (iata, icao, name, city, country, country_code, passengers_monthly, lat, lng, utc_offset, distance_hub, isolated, regional)
-        VALUES (:iata, :icao, :name, :city, :country, :country_code, :passengers_monthly, :lat, :lng, :utc_offset, :distance_hub, :isolated, :regional)
+        INSERT INTO airports (iata, icao, name, city, country, country_code, local_currency, passengers_monthly, lat, lng, utc_offset, distance_hub, isolated, regional)
+        VALUES (:iata, :icao, :name, :city, :country, :country_code, :local_currency, :passengers_monthly, :lat, :lng, :utc_offset, :distance_hub, :isolated, :regional)
     `);
   for (const a of airports) {
     insertAirport.run({
@@ -612,6 +615,7 @@ async function buildDb(): Promise<void> {
       ':city': a.city,
       ':country': a.country,
       ':country_code': a.countryCode,
+      ':local_currency': a.localCurrency,
       ':passengers_monthly': a.passengersMonthly,
       ':lat': a.lat,
       ':lng': a.lng,

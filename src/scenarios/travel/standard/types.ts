@@ -11,6 +11,7 @@ export interface Airport {
   city: string;
   country: string;
   countryCode: string;
+  localCurrency: string;
   utcOffset: number;
   lat: number;
   long: number;
