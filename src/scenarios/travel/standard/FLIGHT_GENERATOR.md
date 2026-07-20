@@ -84,7 +84,7 @@ After a valid Flight[] sequence is built (direct or via hub path), aggregate Fli
 
 ## Time Flow
 
-Enriches each Route's Flight[] with realistic departure/arrival timestamps and generates route copies across the day's available departure slots.
+Enriches each Route already produced by Path Flow with realistic departure/arrival timestamps. Time Flow does not add or remove Routes — it only takes the given collection and spaces out first-leg departure times across it; trimming/weighting the collection is a later concern (see Normalization).
 
 ### Flight Duration
 
@@ -104,13 +104,13 @@ Enriches each Route's Flight[] with realistic departure/arrival timestamps and g
 - Flights in the past are never offered.
 - If the search date is the current day, the earliest valid departure is 6 hours from the current time (per airport-local clock).
   - If that 6-hour floor falls past the end of the current day's departure schedule (last slot before midnight), no current-day flights are offered — the earliest available departures roll over to the next day's full schedule instead.
-- If the search date is a future day, the full day's schedule (starting 5AM local) is available with no time-of-day restriction.
+- If the search date is a future day, the earliest valid departure is 5AM local, with no further time-of-day restriction — 5AM is just a floor, not a rigid slot start.
 
-### Daily Schedule & Route Copies
+### Departure Time Assignment
 
-- A "full" day of departures for a given edge starts at 5AM local and offers roughly 20 evenly-spaced departure slots through the day.
-- Time Flow expands the Path Flow route collection by generating route copies per valid departure slot, each copy re-deriving its own leg timestamps (duration + connection time) from that slot's departure onward.
-- Route copies are filtered by the Departure Windows & Availability rules above before being passed downstream.
+- Time Flow assigns each Route in the given collection a first-leg departure time, spaced out across the valid departure window for that day (from whichever floor applies — 5AM, or the 6-hour-from-now floor on the current day — per the Departure Windows & Availability rules above) — it does not generate additional Routes to fill out the day.
+- Spacing is distributed roughly evenly across the Route collection's size, so a small collection gets widely-spaced departures and a large one (e.g. a long-haul edge with many candidate Routes) gets tighter spacing, rather than a fixed slot count.
+- Once a Route's departure time is assigned, its subsequent leg timestamps follow from Flight Duration and Connection Time above, applied sequentially from that departure onward.
 
 ### Timestamp Presentation
 
