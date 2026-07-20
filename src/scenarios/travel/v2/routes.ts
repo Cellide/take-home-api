@@ -5,8 +5,10 @@ import {
   baseFlightDetailSchema,
   baseListAirportsSchema,
   baseListCitiesSchema,
+  flightResultCoreProperties,
+  pricingResultItemSchema,
 } from '../standard/openapi.js';
-import { v1AirportSchema } from './openapi.js';
+import { v2AirportSchema } from './openapi.js';
 import {
   searchFlights,
   getFlightDetail,
@@ -17,18 +19,63 @@ import {
 } from './controller.js';
 import { servePostmanCollection } from '../../../utils/postman-handler.js';
 
-// v1 schemas are the shared base as-is today; spread/override here if this
-// version ever needs route-specific validation or response tweaks.
-const searchFlightsSchema = { ...baseSearchFlightsSchema };
-const flightDetailSchema = { ...baseFlightDetailSchema };
-// v1 airports drop icao/utcOffset, so the response schema swaps in the trimmed item schema.
+// v2 hides the flat `price` simplification and exposes the per-class `pricing` breakdown
+// instead, on both the Flight and Route result shapes.
+const pricingResultSchema = {
+  type: 'array',
+  items: pricingResultItemSchema,
+};
+
+const flightResultSchema = {
+  type: 'object',
+  properties: { ...flightResultCoreProperties, pricing: pricingResultSchema },
+};
+
+const routeResultSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    flightTimeHours: { type: 'string', description: 'Flight time in HH:MM format' },
+    flightDistanceKms: { type: 'integer' },
+    departure: flightResultSchema.properties.departure,
+    arrival: flightResultSchema.properties.arrival,
+    flights: {
+      type: 'array',
+      items: flightResultSchema,
+    },
+    available: { type: 'number' },
+    pricing: pricingResultSchema,
+  },
+};
+
+const searchFlightsSchema = {
+  ...baseSearchFlightsSchema,
+  response: {
+    200: {
+      ...baseSearchFlightsSchema.response[200],
+      properties: {
+        ...baseSearchFlightsSchema.response[200].properties,
+        routes: { type: 'array', items: routeResultSchema },
+      },
+    },
+  },
+};
+
+const flightDetailSchema = {
+  ...baseFlightDetailSchema,
+  response: {
+    200: flightResultSchema,
+  },
+};
+
+// v2 airports keep the full shape, so the response schema swaps in the untrimmed item schema.
 const listAirportsSchema = {
   ...baseListAirportsSchema,
   response: {
     200: {
       ...baseListAirportsSchema.response[200],
       properties: {
-        airports: { type: 'array', items: v1AirportSchema },
+        airports: { type: 'array', items: v2AirportSchema },
       },
     },
   },
@@ -40,26 +87,26 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   // to this version — registering it twice at root would collide across scenario versions.
   await app.register(async (scoped) => {
     await scoped.register(fastifySwaggerUi, {
-      routePrefix: '/api/travel/v1/swagger',
+      routePrefix: '/api/travel/v2/swagger',
       uiConfig: {
         deepLinking: true,
       },
     });
 
     scoped.get(
-      '/api/travel/v1/postman',
+      '/api/travel/v2/postman',
       {
         onSend: async (_request, reply) => {
           reply.header('Cache-Control', 'public, max-age=86400');
         },
       },
       async (request, reply) => {
-        await servePostmanCollection('travel/v1', request, reply);
+        await servePostmanCollection('travel/v2', request, reply);
       },
     );
 
     scoped.get<{ Querystring: SearchFlightsQuery }>(
-      '/api/travel/v1/search',
+      '/api/travel/v2/search',
       {
         schema: searchFlightsSchema,
         onSend: async (_request, reply) => {
@@ -71,7 +118,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     );
 
     scoped.get<{ Params: FlightIdParams }>(
-      '/api/travel/v1/flights/:id',
+      '/api/travel/v2/flights/:id',
       {
         schema: flightDetailSchema,
         onSend: async (_request, reply) => {
@@ -83,7 +130,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     );
 
     scoped.get(
-      '/api/travel/v1/airports',
+      '/api/travel/v2/airports',
       {
         schema: listAirportsSchema,
         onSend: async (_request, reply) => {
@@ -94,7 +141,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     );
 
     scoped.get(
-      '/api/travel/v1/cities',
+      '/api/travel/v2/cities',
       {
         schema: listCitiesSchema,
         onSend: async (_request, reply) => {

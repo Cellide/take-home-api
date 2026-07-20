@@ -1,0 +1,97 @@
+{
+  "info": {
+    "name": "Take Home API - Travel V2",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/health",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["health"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Swagger",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/api/travel/v2/swagger",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "travel", "v2", "swagger"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Airports",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/api/travel/v2/airports",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "travel", "v2", "airports"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Cities",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/api/travel/v2/cities",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "travel", "v2", "cities"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Search",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/api/travel/v2/search?from=CNF&to=GRU&date=2026-11-20",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "travel", "v2", "search"],
+          "query": [
+            {
+              "key": "from",
+              "value": "CNF"
+            },
+            {
+              "key": "to",
+              "value": "GRU"
+            },
+            {
+              "key": "date",
+              "value": "2026-11-20"
+            }
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

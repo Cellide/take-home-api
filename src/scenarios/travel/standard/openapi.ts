@@ -18,6 +18,7 @@ export const airportSchema = {
     city: { type: 'string', description: 'City name' },
     country: { type: 'string', description: 'Country name' },
     countryCode: { type: 'string', description: 'Country code (two letters)' },
+    localCurrency: { type: 'string', description: 'Local currency code (three letters)' },
     utcOffset: { type: 'number', description: 'UTC offset' },
     lat: { type: 'number', description: 'Latitude of airport' },
     long: { type: 'number', description: 'Longitude of airport' },
@@ -251,40 +252,55 @@ export const flightIdParams = {
 
 
 // Self-contained (no $ref) shape actually produced by findDirectFlights + groupRoutes/generator.ts, used for the
-// search response so fastify's serializer doesn't strip the real route/flight fields down to
-// the old flat `flightResultSchema` shape.
+// search/detail responses so fastify's serializer doesn't strip the real route/flight fields
+// down to the old flat `flightResultSchema` shape.
 // flightTimeHours is formatted as HH:MM string; flightDistanceKms is integer.
-const routeResultFlightSchema = {
+// Shared by every version's flight result shape; version-specific openapi.ts files spread this
+// and add whichever pricing representation (flat `price` vs per-class `pricing`) they expose.
+export const flightResultCoreProperties = {
+  id: { type: 'string' },
+  flightTimeHours: { type: 'string', description: 'Flight time in HH:MM format' },
+  flightDistanceKms: { type: 'integer' },
+  departure: {
+    type: 'object',
+    properties: {
+      timestamp: { type: 'string' },
+      airport: { type: 'string' },
+    },
+  },
+  arrival: {
+    type: 'object',
+    properties: {
+      timestamp: { type: 'string' },
+      airport: { type: 'string' },
+    },
+  },
+  travelInfo: {
+    type: 'object',
+    properties: {
+      airline: { type: 'string' },
+      aircraft: { type: 'string' },
+      flightNumber: { type: 'string' },
+    },
+  },
+  available: { type: 'number' },
+};
+
+export const pricingResultItemSchema = {
   type: 'object',
   properties: {
-    id: { type: 'string' },
-    flightTimeHours: { type: 'string', description: 'Flight time in HH:MM format' },
-    flightDistanceKms: { type: 'integer' },
-    departure: {
-      type: 'object',
-      properties: {
-        timestamp: { type: 'string' },
-        airport: { type: 'string' },
-      },
-    },
-    arrival: {
-      type: 'object',
-      properties: {
-        timestamp: { type: 'string' },
-        airport: { type: 'string' },
-      },
-    },
-    travelInfo: {
-      type: 'object',
-      properties: {
-        airline: { type: 'string' },
-        aircraft: { type: 'string' },
-        flightNumber: { type: 'string' },
-      },
-    },
-    price: { type: 'number' },
+    currency: { type: 'string' },
     available: { type: 'number' },
+    regular: { type: 'number' },
+    economy: { type: 'number' },
+    businessClass: { type: 'number' },
+    firstClass: { type: 'number' },
   },
+};
+
+const routeResultFlightSchema = {
+  type: 'object',
+  properties: { ...flightResultCoreProperties, price: { type: 'number' } },
 };
 
 const routeResultSchema = {
@@ -325,35 +341,7 @@ export const baseSearchFlightsSchema = {
 // v1 flight detail schema: formatted times (HH:MM string) and rounded distance (integer)
 const flightDetailResponseSchema = {
   type: 'object',
-  properties: {
-    id: { type: 'string' },
-    flightTimeHours: { type: 'string', description: 'Flight time in HH:MM format' },
-    flightDistanceKms: { type: 'integer' },
-    departure: {
-      type: 'object',
-      properties: {
-        timestamp: { type: 'string' },
-        airport: { type: 'string' },
-      },
-    },
-    arrival: {
-      type: 'object',
-      properties: {
-        timestamp: { type: 'string' },
-        airport: { type: 'string' },
-      },
-    },
-    travelInfo: {
-      type: 'object',
-      properties: {
-        airline: { type: 'string' },
-        aircraft: { type: 'string' },
-        flightNumber: { type: 'string' },
-      },
-    },
-    price: { type: 'number' },
-    available: { type: 'number' },
-  },
+  properties: { ...flightResultCoreProperties, price: { type: 'number' } },
 };
 
 export const baseFlightDetailSchema = {
@@ -400,9 +388,29 @@ export const travelSchemas = {
   Route: routeSchema,
 };
 
-export const travelEndpoints = {
-  '/api/travel/v1/cities': citiesParameters,
-  '/api/travel/v1/airports': airportsParameters,
-  '/api/travel/v1/search': searchFlightsParameters,
-  '/api/travel/v1/flights/{id}': getFlightParameters,
-};
+interface ObjectSchema {
+  type: string;
+  required?: string[];
+  properties: Record<string, unknown>;
+}
+
+// Drops fields from a base schema's `properties`/`required` for a version override, keeping a
+// version's component schema in sync with whatever the base defines. Shared by every version's
+// openapi.ts so field trims never silently diverge from the canonical shape.
+export function omitSchemaFields<T extends ObjectSchema>(schema: T, fields: string[]): T {
+  return {
+    ...schema,
+    required: schema.required?.filter((key) => !fields.includes(key)),
+    properties: Object.fromEntries(Object.entries(schema.properties).filter(([key]) => !fields.includes(key))),
+  };
+}
+
+// Every version mounts the same four operations under its own path prefix.
+export function buildTravelEndpoints(version: string): Record<string, unknown> {
+  return {
+    [`/api/travel/${version}/cities`]: citiesParameters,
+    [`/api/travel/${version}/airports`]: airportsParameters,
+    [`/api/travel/${version}/search`]: searchFlightsParameters,
+    [`/api/travel/${version}/flights/{id}`]: getFlightParameters,
+  };
+}

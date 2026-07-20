@@ -11,53 +11,47 @@ import {
 } from '../standard/controller.js';
 import type { FormattedFlight, FormattedRoute } from '../standard/formatters.js';
 import type { Airport, City } from '../standard/types.js';
-import type { V1Airport, V1Flight, V1Route } from './types.js';
+import type { V2Airport, V2Flight, V2Route } from './types.js';
 
 export type { SearchFlightsQuery, FlightIdParams, SearchFlightsRequest, FlightDetailRequest };
 
-// v1 airports drop icao/utcOffset/lat/long and the internal category flags.
-function toV1Airport({
-  icao: _icao,
-  utcOffset: _utcOffset,
-  lat: _lat,
-  long: _long,
+// v2 airports drop only the internal category flags; icao/utcOffset/lat/long stay (full spec).
+function toV2Airport({
   isStandard: _isStandard,
   isRegional: _isRegional,
   isHub: _isHub,
   isIsolated: _isIsolated,
   ...airport
-}: Airport): V1Airport {
+}: Airport): V2Airport {
   return airport;
 }
 
-// v1 flights/routes keep the flat `price` and drop the per-class `pricing` breakdown.
-function toV1Flight({ pricing: _pricing, ...flight }: FormattedFlight): V1Flight {
+// v2 flights/routes drop the flat `price` simplification and keep the per-class `pricing` breakdown.
+function toV2Flight({ price: _price, ...flight }: FormattedFlight): V2Flight {
   return flight;
 }
 
-// Note: only per-Flight `pricing` is dropped here — the Route-level `pricing` (aggregated from
-// the first Flight in groupRoutes) is intentionally kept, matching the pre-existing V1Route shape.
-function toV1Route({ flights, ...route }: FormattedRoute): V1Route {
-  return { ...route, flights: flights.map(toV1Flight) };
+function toV2Route({ price: _price, flights, ...route }: FormattedRoute): V2Route {
+  return { ...route, flights: flights.map(toV2Flight) };
 }
 
 export interface SearchFlightsResult extends SearchFlightsQuery {
-  routes: V1Route[];
+  routes: V2Route[];
 }
 
 export async function searchFlights(request: SearchFlightsRequest): Promise<SearchFlightsResult> {
   const { from, to, date, routes } = await searchFlightsBase(request);
-  return { from, to, date, routes: routes.map(toV1Route) };
+  return { from, to, date, routes: routes.map(toV2Route) };
 }
 
-export async function getFlightDetail(request: FlightDetailRequest): Promise<V1Flight> {
+export async function getFlightDetail(request: FlightDetailRequest): Promise<V2Flight> {
   const flight = await getFlightDetailBase(request);
-  return toV1Flight(flight);
+  return toV2Flight(flight);
 }
 
-export async function listAirports(request: FastifyRequest): Promise<{ airports: V1Airport[] }> {
+export async function listAirports(request: FastifyRequest): Promise<{ airports: V2Airport[] }> {
   const airports = await listAirportsBase(request);
-  return { airports: airports.map(toV1Airport) };
+  return { airports: airports.map(toV2Airport) };
 }
 
 export async function listCities(request: FastifyRequest): Promise<{ cities: City[] }> {

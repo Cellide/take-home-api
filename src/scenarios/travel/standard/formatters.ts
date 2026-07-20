@@ -1,5 +1,17 @@
 import type { Flight, Route } from './types.js';
-import type { V1Flight, V1Route } from '../v1/types.js';
+
+// Version-agnostic formatted shape: raw Flight/Route with flightTimeHours/flightDistanceKms
+// presented for API consumption (HH:MM string, rounded km). Still carries both `price` and
+// `pricing` — version controllers trim whichever one their scenario hides.
+export type FormattedFlight = Omit<Flight, 'flightTimeHours' | 'flightDistanceKms'> & {
+  flightTimeHours: string;
+  flightDistanceKms: number;
+};
+export type FormattedRoute = Omit<Route, 'flights' | 'flightTimeHours' | 'flightDistanceKms'> & {
+  flightTimeHours: string;
+  flightDistanceKms: number;
+  flights: FormattedFlight[];
+};
 
 export function formatFlightTime(hours: number): string {
   const minutes = Math.ceil(hours * 60);
@@ -8,7 +20,7 @@ export function formatFlightTime(hours: number): string {
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 }
 
-export function formatFlight(flight: Flight): V1Flight {
+export function formatFlight(flight: Flight): FormattedFlight {
   return {
     ...flight,
     flightTimeHours: formatFlightTime(flight.flightTimeHours),
@@ -16,7 +28,7 @@ export function formatFlight(flight: Flight): V1Flight {
   };
 }
 
-export function formatRoute(route: Route): V1Route {
+export function formatRoute(route: Route): FormattedRoute {
   return {
     ...route,
     flightTimeHours: formatFlightTime(route.flightTimeHours),
