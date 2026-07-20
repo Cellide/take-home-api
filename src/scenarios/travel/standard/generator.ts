@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker';
 import { randomUUID } from 'crypto';
-import type { Airline, Airport, Flight, Route } from './types.js';
+import type { Aircraft, Airline, Airport, Flight, Route } from './types.js';
 import { TravelStore } from './store.js';
 
 const store = new TravelStore();
@@ -44,11 +44,38 @@ function makeDurationHours(distanceKms: number): number {
   return base * (1 + jitter);
 }
 
+// FLIGHT_GENERATOR.md Equipment Generation: aircraft size follows the route's airport
+// category — a regional leg (either end) is too small for anything but a small aircraft, a
+// hub-to-hub leg is the only case that can justify a large aircraft, everything else (regular
+// airports, regular-to-hub feeders) gets a medium aircraft.
+function pickAircraftSize(from: Airport, to: Airport): Aircraft['type'] {
+  if (from.isRegional || to.isRegional) return 'small';
+  if (from.isHub && to.isHub) return 'large';
+  return 'medium';
+}
+
+function pickAircraft(from: Airport, to: Airport, aircraft: Aircraft[]): Aircraft {
+  const size = pickAircraftSize(from, to);
+  return faker.helpers.arrayElement(aircraft.filter((a) => a.type === size));
+}
+
+// Flight number format: "CC XXAAXAA" — airline IATA code, space, two random letters, two
+// random digits, one random letter, two random digits.
+function makeFlightNumber(airlineIata: string): string {
+  const suffix =
+    faker.string.alpha({ length: 2, casing: 'upper' }) +
+    faker.string.numeric(2) +
+    faker.string.alpha({ length: 1, casing: 'upper' }) +
+    faker.string.numeric(2);
+  return `${airlineIata} ${suffix}`;
+}
+
 // Pricing/seat enrichment happens in later Search-Flow stages that are still `To be
 // determined` in FLIGHT_GENERATOR.md. Timestamps here are placeholders (the raw query date) —
 // applyTimeFlow overwrites them once a Route's departure slot is known.
-function makeFlight(from: Airport, to: Airport, date: string, airline: Airline): Flight {
+function makeFlight(from: Airport, to: Airport, date: string, airline: Airline, aircraftList: Aircraft[]): Flight {
   const flightDistanceKms = haversineKm(from, to);
+  const aircraft = pickAircraft(from, to, aircraftList);
   return {
     id: generateId(),
     flightTimeHours: makeDurationHours(flightDistanceKms),
@@ -63,12 +90,12 @@ function makeFlight(from: Airport, to: Airport, date: string, airline: Airline):
     },
     travelInfo: {
       airline: airline.iata,
-      plane: '',
-      flightNumber: '',
+      aircraft: `${aircraft.manufacturer} ${aircraft.model}`,
+      flightNumber: makeFlightNumber(airline.iata),
     },
     price: 0,
     pricing: [{ currency: 'USD', regular: 0 }],
-    available: 0,
+    available: aircraft.capacity,
     seats: [{ regular: 0 }],
   };
 }
@@ -85,11 +112,18 @@ function flightCacheKey(from: string, to: string, date: string, airline: string)
   return `${from}|${to}|${date}|${airline}`;
 }
 
-function getOrMakeFlight(cache: FlightCache, from: Airport, to: Airport, date: string, airline: Airline): Flight {
+function getOrMakeFlight(
+  cache: FlightCache,
+  from: Airport,
+  to: Airport,
+  date: string,
+  airline: Airline,
+  aircraftList: Aircraft[],
+): Flight {
   const key = flightCacheKey(from.iata, to.iata, date, airline.iata);
   let flight = cache.get(key);
   if (!flight) {
-    flight = makeFlight(from, to, date, airline);
+    flight = makeFlight(from, to, date, airline, aircraftList);
     cache.set(key, flight);
   }
   return flight;
@@ -101,14 +135,15 @@ export async function findDirectFlights(from: string, to: string, date: string, 
 
   // First pass: only path resolution. A direct flight is possible whenever an airline
   // holds a regional airport_airlines edge at both `from` and `to`; one Flight per airline.
-  const [fromAirport, toAirport, regionalAirlines] = await Promise.all([
+  const [fromAirport, toAirport, regionalAirlines, aircraftList] = await Promise.all([
     store.getAirport(from),
     store.getAirport(to),
     store.getRegionalAirlines(from, to),
+    store.getAircraft(),
   ]);
   if (!fromAirport || !toAirport) return [];
 
-  return regionalAirlines.map((airline) => makeFlight(fromAirport, toAirport, date, airline));
+  return regionalAirlines.map((airline) => makeFlight(fromAirport, toAirport, date, airline, aircraftList));
 }
 
 // Departure reduction: given the query's departure or arrival airport, produce candidate
@@ -122,6 +157,7 @@ async function reduceToHub(
   date: string,
   direction: 'outbound' | 'inbound',
   flightCache: FlightCache,
+  aircraftList: Aircraft[],
 ): Promise<GatewayCandidate[]> {
   if (airport.isHub) {
     return [{ hub: airport, edges: [] }];
@@ -145,11 +181,11 @@ async function reduceToHub(
       const airline = faker.helpers.arrayElement(airlines);
       const connector =
         direction === 'outbound'
-          ? getOrMakeFlight(flightCache, airport, regular, date, airline)
-          : getOrMakeFlight(flightCache, regular, airport, date, airline);
+          ? getOrMakeFlight(flightCache, airport, regular, date, airline, aircraftList)
+          : getOrMakeFlight(flightCache, regular, airport, date, airline, aircraftList);
 
       // Recurse: the regular connector airport still needs to reach a proper Hub.
-      const downstream = await reduceToHub(regular, date, direction, flightCache);
+      const downstream = await reduceToHub(regular, date, direction, flightCache, aircraftList);
       for (const gw of downstream) {
         results.push({
           hub: gw.hub,
@@ -173,8 +209,8 @@ async function reduceToHub(
   const airline = faker.helpers.arrayElement(airlines);
   const edge =
     direction === 'outbound'
-      ? getOrMakeFlight(flightCache, airport, nearest.hub, date, airline)
-      : getOrMakeFlight(flightCache, nearest.hub, airport, date, airline);
+      ? getOrMakeFlight(flightCache, airport, nearest.hub, date, airline, aircraftList)
+      : getOrMakeFlight(flightCache, nearest.hub, airport, date, airline, aircraftList);
 
   return [{ hub: nearest.hub, edges: [edge] }];
 }
@@ -260,9 +296,10 @@ export async function findConnectingRoutes(from: string, to: string, date: strin
   // Isolated airports don't receive civilian flights.
   if (fromAirport.isIsolated || toAirport.isIsolated) return [];
 
+  const aircraftList = await store.getAircraft();
   const flightCache: FlightCache = new Map();
-  const starts = await reduceToHub(fromAirport, date, 'outbound', flightCache);
-  const ends = await reduceToHub(toAirport, date, 'inbound', flightCache);
+  const starts = await reduceToHub(fromAirport, date, 'outbound', flightCache, aircraftList);
+  const ends = await reduceToHub(toAirport, date, 'inbound', flightCache, aircraftList);
   if (starts.length === 0 || ends.length === 0) return [];
 
   const routes: Flight[][] = [];
@@ -300,7 +337,9 @@ export async function findConnectingRoutes(from: string, to: string, date: strin
       for (const airlineCombination of generateAirlineCombinations(legAirlines)) {
         const hubLegs: Flight[] = [];
         for (let i = 0; i < hubPath.length - 1; i++) {
-          hubLegs.push(getOrMakeFlight(flightCache, hubPath[i], hubPath[i + 1], date, airlineCombination[i]));
+          hubLegs.push(
+            getOrMakeFlight(flightCache, hubPath[i], hubPath[i + 1], date, airlineCombination[i], aircraftList),
+          );
         }
         routes.push([...start.edges, ...hubLegs, ...end.edges]);
         if (routes.length >= MAX_ROUTES) return routes;

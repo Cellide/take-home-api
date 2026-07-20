@@ -40,7 +40,7 @@ The algorithm follows this process:
 - Path flow: decide possible paths, primarily by counting airline edges along nodes.
   - "Return flight" logic just reverses edge list, same edge choices.
 - Time flow: enrich route collection with more routes varying over departure times.
-- Equipment generation: enrich all Flights with airline, plane, flight number
+- Equipment generation: enrich all Flights with airline, aircraft, flight number
 - Seat offering: enrich all Flights with seats availability
 - Pricing: enrich all Flights with booking prices
 - Normalization:
@@ -127,7 +127,15 @@ To be determined. Currently all Flights have $0 price. Pricing per cabin class a
 
 ## Equipment Generation
 
-To be determined.
+Each Flight is assigned an aircraft from the `aircraft` reference table (see TRAVEL.md), driving both `travelInfo.aircraft`/`available` and, indirectly, the flight number:
+
+- **Aircraft size** is picked from the leg's departure/arrival airport categories (see Design):
+  - Either airport is **regional** → a random **small** aircraft.
+  - Both airports are **hubs** (hub-to-hub leg) → a random **large** aircraft.
+  - Anything else (regular airports, regular-to-hub feeders) → a random **medium** aircraft.
+- `travelInfo.aircraft` is formatted as `"Manufacturer Model"` (e.g. `"Boeing 737"`) from the chosen aircraft row.
+- `available` is set to the chosen aircraft's `capacity` — the seat count is fixed once at generation time, not re-derived from the DB later.
+- `travelInfo.flightNumber` follows the format `"CC XXAAXAA"`: the airline's two-letter IATA code, a space, then two random letters, two random digits, one random letter, and two random digits.
 
 ## Normalization
 
