@@ -83,7 +83,8 @@ function buildCurrencyRatesCSV(rates: Record<string, number>): void {
   for (const currency of currencies) {
     // Use fetched rate if available, otherwise use fallback
     const rate = rates[currency] ?? FALLBACK_RATES[currency] ?? 1.0;
-    csvLines.push(`${currency},${rate}`);
+    const roundedRate = Math.round(rate * 100) / 100;
+    csvLines.push(`${currency},${roundedRate}`);
   }
 
   const filePath = path.join(TRAVEL_DIR, 'currency_rates.csv');
