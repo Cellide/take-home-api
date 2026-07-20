@@ -40,9 +40,9 @@ The algorithm follows this process:
 - Path flow: decide possible paths, primarily by counting airline edges along nodes.
   - "Return flight" logic just reverses edge list, same edge choices.
 - Time flow: enrich route collection with more routes varying over departure times.
+- Equipment generation: enrich all Flights with airline, plane, flight number
 - Seat offering: enrich all Flights with seats availability
 - Pricing: enrich all Flights with booking prices
-- Equipment generation: enrich all Flights with airline, plane, flight number
 - Normalization:
   - Ensure Route metadata is consistent with Flight's list (times, distance, prices, available seats)
   - Trim final routes, weight airline distribution.
