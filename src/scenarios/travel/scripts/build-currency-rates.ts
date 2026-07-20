@@ -1,0 +1,112 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const TRAVEL_DIR = path.resolve(__dirname, '..');
+
+// Fallback rates for when API is unavailable
+const FALLBACK_RATES: Record<string, number> = {
+  'AED': 3.67, 'ALL': 99.2, 'AMD': 390, 'AOA': 1, 'ARS': 850, 'AUD': 1.53,
+  'AZN': 1.7, 'BDT': 109.2, 'BGN': 1.81, 'BHD': 0.376, 'BND': 1, 'BOB': 6.93,
+  'BRL': 4.97, 'BSD': 1, 'BTN': 1, 'BWP': 13.5, 'BYN': 1, 'CAD': 1.36,
+  'CDF': 1, 'CHF': 0.88, 'CLP': 950, 'CNY': 7.24, 'COP': 4050, 'CRC': 518,
+  'CUP': 24, 'CVE': 101, 'CZK': 24.3, 'DJF': 177, 'DKK': 6.86, 'DOP': 1,
+  'DZD': 1, 'EGP': 49.2, 'ETB': 1, 'EUR': 0.92, 'FJD': 2.24, 'GBP': 0.79,
+  'GEL': 2.65, 'GHS': 15.3, 'GMD': 58.5, 'GYD': 208, 'HKD': 7.81, 'HTG': 131,
+  'HUF': 365, 'IDR': 15950, 'ILS': 3.65, 'INR': 83.12, 'IQD': 1312, 'IRR': 42105,
+  'ISK': 138, 'JMD': 156, 'JOD': 0.709, 'JPY': 149.5, 'KES': 158.5, 'KGS': 85,
+  'KHR': 4150, 'KMF': 492, 'KRW': 1319, 'KWD': 0.307, 'KZT': 445, 'LAK': 20850,
+  'LBP': 89500, 'LKR': 327, 'LSL': 18.35, 'LYD': 1, 'MAD': 9.98, 'MGA': 4395,
+  'MKD': 55.8, 'MMK': 2100, 'MOP': 1, 'MUR': 1, 'MVR': 1, 'MWK': 1048,
+  'MXN': 17.05, 'MYR': 4.73, 'MZN': 63.8, 'NAD': 1, 'NGN': 1515, 'NIO': 36.5,
+  'NOK': 10.68, 'NPR': 1, 'NZD': 1.67, 'OMR': 0.385, 'PAB': 1.0, 'PEK': 3.75,
+  'PHP': 56.8, 'PKR': 278, 'PLN': 4.03, 'PYG': 7280, 'QAR': 3.64, 'RON': 4.97,
+  'RUB': 96.5, 'SAR': 3.75, 'SCR': 12.8, 'SDG': 66, 'SEK': 10.55, 'SGD': 1.34,
+  'SLL': 18500, 'SYP': 13105, 'TND': 3.1, 'THB': 36.2, 'TRY': 32.8, 'TWD': 31.5,
+  'TZS': 2650, 'UAH': 40.6, 'UGX': 3850, 'USD': 1.0, 'UYU': 1, 'UZS': 12750,
+  'VES': 38.5, 'VND': 24500, 'VUV': 119, 'XAF': 655, 'XOF': 655, 'YER': 249,
+  'ZAR': 18.35, 'ZMW': 24.8, 'ZWL': 1,
+};
+
+async function fetchExchangeRates(): Promise<Record<string, number> | null> {
+  // Try multiple free API sources, in order of preference
+  const sources = [
+    {
+      name: 'exchangerate.host',
+      url: 'https://api.exchangerate.host/latest?base=USD',
+      parseResponse: (data: Record<string, unknown>) => (data as any).rates as Record<string, number>,
+    },
+    {
+      name: 'exchangerate-api.com',
+      url: 'https://v6.exchangerate-api.com/v6/latest/USD',
+      parseResponse: (data: Record<string, unknown>) => (data as any).conversion_rates as Record<string, number>,
+    },
+  ];
+
+  for (const source of sources) {
+    try {
+      console.log(`Fetching exchange rates from ${source.name}...`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
+      const response = await fetch(source.url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        console.warn(`  ${source.name} returned status ${response.status}`);
+        continue;
+      }
+
+      const data = (await response.json()) as Record<string, unknown>;
+      const rates = source.parseResponse(data);
+
+      if (rates && typeof rates === 'object' && Object.keys(rates).length > 0) {
+        console.log(`  ✓ Successfully fetched ${Object.keys(rates).length} rates`);
+        return rates;
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.warn(`  ${source.name} failed: ${msg}`);
+    }
+  }
+
+  return null;
+}
+
+function buildCurrencyRatesCSV(rates: Record<string, number>): void {
+  const csvLines = ['currency_code,rate_usd'];
+
+  // Get all unique currencies from fallback rates
+  const currencies = Object.keys(FALLBACK_RATES).sort();
+
+  for (const currency of currencies) {
+    // Use fetched rate if available, otherwise use fallback
+    const rate = rates[currency] ?? FALLBACK_RATES[currency] ?? 1.0;
+    csvLines.push(`${currency},${rate}`);
+  }
+
+  const filePath = path.join(TRAVEL_DIR, 'currency_rates.csv');
+  fs.writeFileSync(filePath, csvLines.join('\n') + '\n');
+
+  console.log(`\nWrote ${currencies.length} exchange rates to currency_rates.csv`);
+  console.log(`  Sample rates: USD=${rates['USD'] ?? 1.0}, EUR=${rates['EUR'] ?? FALLBACK_RATES['EUR']}, JPY=${rates['JPY'] ?? FALLBACK_RATES['JPY']}`);
+}
+
+async function main(): Promise<void> {
+  console.log('Building currency rates CSV...\n');
+
+  const rates = await fetchExchangeRates();
+
+  if (rates) {
+    buildCurrencyRatesCSV(rates);
+  } else {
+    console.warn('\n⚠ Could not fetch live rates, using fallback rates');
+    buildCurrencyRatesCSV(FALLBACK_RATES);
+  }
+}
+
+main().catch((err) => {
+  console.error('Error building currency rates:', err);
+  process.exit(1);
+});

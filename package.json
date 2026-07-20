@@ -21,6 +21,7 @@
     "docs": "cd docs && mintlify dev --port 3001 --disable-openapi --no-open",
     "docs:check": "cd docs && mintlify broken-links && mintlify a11y && mintlify validate",
     "db:build:travel": "tsx src/scenarios/travel/scripts/build-db.ts",
+    "db:build:currency-rates": "tsx src/scenarios/travel/scripts/build-currency-rates.ts",
     "db:build:all": "tsx src/scripts/db-build-all.ts",
     "img:build:airports": "node src/scenarios/travel/scripts/gen-airports-map.cjs"
   },
