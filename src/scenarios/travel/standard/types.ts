@@ -20,6 +20,13 @@ export interface Airport {
   isIsolated: boolean;
 }
 
+export interface Aircraft {
+  manufacturer: string;
+  model: string;
+  type: 'small' | 'medium' | 'large';
+  capacity: number;
+}
+
 export interface Airline {
   iata: string;
   icao: string;

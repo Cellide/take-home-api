@@ -47,6 +47,13 @@ interface AirlineRow {
   loyalty: boolean;
 }
 
+interface AircraftRow {
+  manufacturer: string;
+  model: string;
+  type: 'small' | 'medium' | 'large';
+  capacity: number;
+}
+
 // Minimal RFC4180-ish CSV parser: handles quoted fields with embedded commas.
 function parseCsv(filePath: string): string[][] {
   const content = fs.readFileSync(filePath, 'utf-8').replace(/\r\n/g, '\n').trim();
@@ -100,6 +107,16 @@ function parseAirports(filePath: string): AirportRow[] {
     distanceHub: r[10] === '1',
     isolated: r[11] === '1',
     regional: r[12] === '1',
+  }));
+}
+
+function parseAircraft(filePath: string): AircraftRow[] {
+  const [, ...rows] = parseCsv(filePath);
+  return rows.map((r) => ({
+    manufacturer: r[0],
+    model: r[1],
+    type: r[2] as AircraftRow['type'],
+    capacity: Number(r[3]),
   }));
 }
 
@@ -523,6 +540,7 @@ async function buildDb(): Promise<void> {
   const airports = parseAirports(path.join(TRAVEL_DIR, 'airports.csv'));
   const fictionalAirlines = parseAirlines(path.join(TRAVEL_DIR, 'fictional_airlines.csv'));
   const realAirlines = parseAirlines(path.join(TRAVEL_DIR, 'real_airlines.csv'));
+  const aircraft = parseAircraft(path.join(TRAVEL_DIR, 'aircraft.csv'));
 
   await dropDatabase(DB_NAME);
   const dbPath = path.join(TRAVEL_DIR, `${DB_NAME}.sqlite`);
@@ -572,6 +590,14 @@ async function buildDb(): Promise<void> {
         );
 
         CREATE INDEX idx_airport_airlines_airline ON airport_airlines (airline_iata);
+
+        CREATE TABLE aircraft (
+            manufacturer TEXT NOT NULL,
+            model TEXT NOT NULL,
+            type TEXT NOT NULL,
+            capacity INTEGER NOT NULL
+        );
+        CREATE INDEX idx_aircraft_type ON aircraft (type);
     `);
 
   const insertAirport = db.prepare(`
@@ -631,6 +657,20 @@ async function buildDb(): Promise<void> {
   }
   insertAirline.free();
 
+  const insertAircraft = db.prepare(`
+        INSERT INTO aircraft (manufacturer, model, type, capacity)
+        VALUES (:manufacturer, :model, :type, :capacity)
+    `);
+  for (const a of aircraft) {
+    insertAircraft.run({
+      ':manufacturer': a.manufacturer,
+      ':model': a.model,
+      ':type': a.type,
+      ':capacity': a.capacity,
+    });
+  }
+  insertAircraft.free();
+
   linkAirportsToAirlines(db, airports, fictionalAirlines, realAirlines);
 
   await saveDatabase(TRAVEL_DIR, DB_NAME);
@@ -639,6 +679,7 @@ async function buildDb(): Promise<void> {
   console.log(`Built ${dbPath}`);
   console.log(`  airports: ${airports.length}`);
   console.log(`  airlines: ${fictionalAirlines.length} fictional + ${realAirlines.length} real`);
+  console.log(`  aircraft: ${aircraft.length}`);
   console.log(`  airport_airlines: possible airline flights between airports`);
   console.log(`  isolated airports (no flights): ${airports.filter((a) => a.isolated).length}`);
   console.log(`  regional airports (few airlines): ${airports.filter((a) => a.regional).length}`);

@@ -1,6 +1,6 @@
 import path from 'path';
 import type { Database } from 'sql.js';
-import type { Flight, Airport, City, Airline } from './types.js';
+import type { Flight, Airport, City, Airline, Aircraft } from './types.js';
 import { getDatabase, openDatabase } from '../../../core/db.js';
 import { getEnvBool } from '../../../config/env.js';
 
@@ -59,6 +59,15 @@ function rowToAirline(row: Record<string, unknown>): Airline {
     hasBusinessClass: Boolean(row.business_class),
     hasFirstClass: Boolean(row.first_class),
     hasLoyaltyProgram: Boolean(row.loyalty),
+  };
+}
+
+function rowToAircraft(row: Record<string, unknown>): Aircraft {
+  return {
+    manufacturer: row.manufacturer as string,
+    model: row.model as string,
+    type: row.type as Aircraft['type'],
+    capacity: row.capacity as number,
   };
 }
 
@@ -200,6 +209,20 @@ export class TravelStore {
     stmt.free();
 
     return airports;
+  }
+
+  async getAircraft(): Promise<Aircraft[]> {
+    const db = await this.ensureDatabase();
+
+    const stmt = db.prepare('SELECT manufacturer, model, type, capacity FROM aircraft');
+    const aircraft: Aircraft[] = [];
+
+    while (stmt.step()) {
+      aircraft.push(rowToAircraft(stmt.getAsObject()));
+    }
+    stmt.free();
+
+    return aircraft;
   }
 
   async getCities(): Promise<City[]> {
