@@ -15,7 +15,7 @@ export async function servePostmanCollection(
     const collection = JSON.parse(readFileSync(collectionPath, 'utf-8'));
     reply.header('Content-Type', 'application/json');
     reply.send(collection);
-  } catch (error) {
+  } catch {
     reply.status(404).send({
       status: 404,
       code: 'NOT_FOUND',

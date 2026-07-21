@@ -24,11 +24,10 @@ export function generateId(): string {
 
 function haversineKm(a: { lat: number; long: number }, b: { lat: number; long: number }): number {
   const R = 6371; // Earth radius
-  const toRad = (d: number) => (d * Math.PI) / 180;
+  const toRad = (d: number): number => (d * Math.PI) / 180;
   const dLat = toRad(b.lat - a.lat);
   const dLon = toRad(b.long - a.long);
-  const h =
-    Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLon / 2) ** 2;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLon / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
@@ -204,7 +203,12 @@ function getOrMakeFlight(
 }
 
 // `count` will gate how many routes are returned once multi-route/layover logic lands.
-export async function findDirectFlights(from: string, to: string, date: string, _count: number = 10): Promise<Flight[]> {
+export async function findDirectFlights(
+  from: string,
+  to: string,
+  date: string,
+  _count: number = 10,
+): Promise<Flight[]> {
   faker.seed(hashFlightQuery(from, to, date));
 
   // First pass: only path resolution. A direct flight is possible whenever an airline
@@ -485,7 +489,9 @@ function formatLocalTimestamp(utcMillis: number, utcOffset: number): string {
   const local = new Date(utcMillis + utcOffset * 3600_000);
   const offsetSign = utcOffset >= 0 ? '+' : '-';
   const offsetMagnitude = Math.abs(utcOffset);
-  const offsetStr = Number.isInteger(offsetMagnitude) ? `${offsetMagnitude}` : offsetMagnitude.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+  const offsetStr = Number.isInteger(offsetMagnitude)
+    ? `${offsetMagnitude}`
+    : offsetMagnitude.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
 
   return (
     `${local.getUTCFullYear()}-${pad(local.getUTCMonth() + 1)}-${pad(local.getUTCDate())} ` +

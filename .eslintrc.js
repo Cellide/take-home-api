@@ -10,6 +10,13 @@ module.exports = {
   root: true,
   env: {
     node: true,
+    es2022: true,
+  },
+  globals: {
+    fetch: 'readonly',
+    AbortController: 'readonly',
+    setTimeout: 'readonly',
+    clearTimeout: 'readonly',
   },
   ignorePatterns: ['.eslintrc.js', 'dist', 'node_modules'],
   rules: {
