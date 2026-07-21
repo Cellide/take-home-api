@@ -55,6 +55,8 @@ In advanced scenarios, look out for:
   - Each airport is linked to a few airlines, with busier airports (by `passengers_monthly`) getting more coverage.
   - Assignment is deterministic, so rebuilding the database is reproducible.
 
+Currency conversion is separate from the sqlite build: `src/scenarios/travel/currency_rates.csv` (code, rate vs. USD) is read directly by the pricing generator to convert flight prices out of USD into a Flight's local currency; it isn't loaded into `travel.sqlite`. Loyalty points (`Airline.hasLoyaltyProgram`) are modeled as a data field only — not yet consumed as an alternative pricing currency (see FLIGHT_GENERATOR.md Pricing).
+
 ## References
 
 - Airports information: https://www.world-airport-codes.com/alphabetical/airport-code (glad to link back, folks)

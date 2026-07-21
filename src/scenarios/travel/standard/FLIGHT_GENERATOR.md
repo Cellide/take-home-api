@@ -117,14 +117,6 @@ Enriches each Route already produced by Path Flow with realistic departure/arriv
 - All Flight timestamps are computed and stored local to their airport (departure time local to the departure airport, arrival time local to the arrival airport).
 - Timestamps are presented with explicit UTC offset info (e.g. ISO 8601 with offset) rather than converted to a single shared timezone, so two legs in the same Route may carry different offsets.
 
-## Seat Offering
-
-To be determined. Currently all Flights have 0 available seats and a single seat type (regular). Seat availability and cabin classes will be enriched here once modeled.
-
-## Pricing
-
-To be determined. Currently all Flights have $0 price. Pricing per cabin class and dynamic pricing (e.g. by distance, airline, class) will be enriched here once modeled.
-
 ## Equipment Generation
 
 Each Flight is assigned an aircraft from the `aircraft` reference table (see TRAVEL.md), driving both `travelInfo.aircraft`/`available` and, indirectly, the flight number:
@@ -134,9 +126,33 @@ Each Flight is assigned an aircraft from the `aircraft` reference table (see TRA
   - Both airports are **hubs** (hub-to-hub leg) → a random **large** aircraft.
   - Anything else (regular airports, regular-to-hub feeders) → a random **medium** aircraft.
 - `travelInfo.aircraft` is formatted as `"Manufacturer Model"` (e.g. `"Boeing 737"`) from the chosen aircraft row.
-- `available` is set to the chosen aircraft's `capacity` — the seat count is fixed once at generation time, not re-derived from the DB later.
 - `travelInfo.flightNumber` follows the format `"CC XXAAXAA"`: the airline's two-letter IATA code, a space, then two random letters, two random digits, one random letter, and two random digits.
+
+## Seat Offering
+
+Each Flight is assigned an `available` seat count and a set of cabin classes it sells, both derived at generation time (`makeFlight()`):
+
+- `available` is a random integer in `[10, aircraft.capacity]` — bounded above by the chosen aircraft's capacity, but not fixed to it, so identical aircraft don't always report a full plane.
+- Cabin classes come from `pickSeatClasses(airline)`: `regular` is always offered; if the airline has `hasEconomyClass`, `economy` is added; `businessClass` and `firstClass` are added individually per the airline's corresponding flags. `SeatClass` is `'regular' | 'economy' | 'businessClass' | 'firstClass'`.
+- There is no per-class seat pool split — every offered class on a Flight is sold against the same `available` count rather than a fraction of it. Splitting `available` across classes realistically is a later Normalization concern (see below).
+
+## Pricing
+
+Each Flight is assigned a per-class, per-currency price table, derived from distance (`classBasePriceUsd()` and `makePricing()` in `generator.ts`):
+
+- Base USD price per seat class: `max(flightDistanceKms * BASE_PRICE_PER_KM_USD, MIN_BASE_PRICE_USD)` (`BASE_PRICE_PER_KM_USD = 0.12`, `MIN_BASE_PRICE_USD = 35`), with independent ±`PRICE_JITTER_RATIO` (0.15) jitter per class.
+- The base price is scaled per seat class by `SEAT_CLASS_PRICE_MULTIPLIER`: `regular` 1x, `economy` 0.7x, `businessClass` 2.5x, `firstClass` 4.5x.
+- Currencies offered per Flight are USD plus the departure airport's `localCurrency` (deduped if they're the same). Non-USD amounts are converted via `convertFromUsd()` (`currency.ts`), which reads a rate from `src/scenarios/travel/currency_rates.csv`; if a currency has no listed rate, the USD amount is used unconverted as a fallback.
+- The result is one `FlightPricing` entry per (seat class × currency) combination actually offered on that Flight.
+- The legacy flat `Flight.price` field is `derivePrice()`: the USD price of the cheapest tier available on the Flight, walking `PRICE_TIER_ORDER = ['regular', 'economy', 'businessClass', 'firstClass']`.
+- Loyalty points are not implemented as a pricing currency: `Airline.hasLoyaltyProgram` exists as a data field (DB/CSV/types) but is not consumed anywhere in generation.
 
 ## Normalization
 
-To be determined.
+Route-level aggregation (the numbers described in "Route Normalization" above — `flightTimeHours`, `flightDistanceKms`, `departure`/`arrival`, `available`, `price`, `pricing`) already happens inline during route grouping (`groupRoutes()` / `aggregateRouteMinimumPricing()`), not as a distinct later pass. What remains genuinely undone, flagged by comments in `generator.ts` at the point each shortcut is taken:
+
+- **Route collection trimming**: `MAX_ROUTES` (1000) is only a hard safety cap on generation, not a realistic result-set size — there's no ranking/truncation down to what a real search UI would show.
+- **Airline distribution weighting**: routes aren't weighted or deduplicated by airline mix; every airline combination found in Path Flow survives as-is.
+- **Per-class seat pool splitting**: as noted in Seat Offering, every cabin class on a Flight currently shares the same `available` count instead of each class holding a realistic fraction of it.
+
+There is no dedicated `normalize()` function or file — this is the one stage in the pipeline with no implementation to point to yet.
