@@ -98,6 +98,10 @@ export async function searchFlightsBase(request: SearchFlightsRequest): Promise<
     throw new ApiError(400, 'RETURN_DATE_REQUIRED', 'returnDate is required when mode is RoundTrip');
   }
 
+  if (mode === 'RoundTrip' && returnDate && returnDate <= departureDate) {
+    throw new ApiError(400, 'INVALID_RETURN_DATE', 'returnDate must be after departureDate');
+  }
+
   const outboundRoutes = await findRoutesForLeg(from, to, departureDate, request.id, 'outbound');
   const inboundRoutes =
     mode === 'RoundTrip' ? await findRoutesForLeg(to, from, returnDate as string, request.id, 'inbound') : undefined;
