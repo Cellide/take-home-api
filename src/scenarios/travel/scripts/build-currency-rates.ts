@@ -132,12 +132,14 @@ async function fetchExchangeRates(): Promise<Record<string, number> | null> {
     {
       name: 'exchangerate.host',
       url: 'https://api.exchangerate.host/latest?base=USD',
-      parseResponse: (data: Record<string, unknown>): Record<string, number> => (data as Record<string, Record<string, number>>).rates,
+      parseResponse: (data: Record<string, unknown>): Record<string, number> =>
+        (data as Record<string, Record<string, number>>).rates,
     },
     {
       name: 'exchangerate-api.com',
       url: 'https://v6.exchangerate-api.com/v6/latest/USD',
-      parseResponse: (data: Record<string, unknown>): Record<string, number> => (data as Record<string, Record<string, number>>).conversion_rates,
+      parseResponse: (data: Record<string, unknown>): Record<string, number> =>
+        (data as Record<string, Record<string, number>>).conversion_rates,
     },
   ];
 

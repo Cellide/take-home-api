@@ -195,7 +195,9 @@ export class TravelStore {
     if (opts.onlyRegular) conds.push('a.distance_hub = 0', 'a.regional = 0', 'a.isolated = 0');
 
     const stmt = db.prepare(`
-      SELECT DISTINCT ${AIRPORT_COLUMNS.split(', ').map((c) => `a.${c}`).join(', ')}
+      SELECT DISTINCT ${AIRPORT_COLUMNS.split(', ')
+        .map((c) => `a.${c}`)
+        .join(', ')}
       FROM airport_airlines aa1
       JOIN airport_airlines aa2 ON aa2.airline_iata = aa1.airline_iata
       JOIN airports a ON a.iata = aa2.airport_iata

@@ -35,6 +35,7 @@ The builder script:
 ### Fallback Rates
 
 The fallback rates are reasonable approximations based on typical market rates:
+
 - Major currencies (USD, EUR, GBP, JPY, CHF, CAD, AUD): Live market rates
 - Regional currencies: Typical market rates per region
 - Rare/isolated currencies: Conservative estimates

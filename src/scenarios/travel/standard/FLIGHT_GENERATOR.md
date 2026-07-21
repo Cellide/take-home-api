@@ -75,6 +75,7 @@ When a request is made from a Departure to an Arrival, the algorithm follows:
 ## Route Normalization
 
 After a valid Flight[] sequence is built (direct or via hub path), aggregate Flight metadata into the Route level:
+
 - `flightTimeHours`: sum across all legs.
 - `flightDistanceKms`: sum across all legs.
 - `departure` / `arrival`: inherit from first and last Flight respectively.

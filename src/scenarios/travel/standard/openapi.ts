@@ -260,7 +260,6 @@ export const flightIdParams = {
   },
 };
 
-
 // Self-contained (no $ref) shape actually produced by findDirectFlights + groupRoutes/generator.ts, used for the
 // search/detail responses so fastify's serializer doesn't strip the real route/flight fields
 // down to the old flat `flightResultSchema` shape.

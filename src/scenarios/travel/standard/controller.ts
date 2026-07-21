@@ -49,7 +49,8 @@ export async function searchFlightsBase(request: SearchFlightsRequest): Promise<
 
   if (!routesData) {
     const direct = await findDirectFlights(from, to, date, 5);
-    const sequences: Flight[][] = direct.length > 0 ? direct.map((f) => [f]) : await findConnectingRoutes(from, to, date);
+    const sequences: Flight[][] =
+      direct.length > 0 ? direct.map((f) => [f]) : await findConnectingRoutes(from, to, date);
     const timed = await applyTimeFlow(sequences, date);
     const generated = groupRoutes(timed);
     setCached(cacheKeyVal, generated, CACHE_TTL);
