@@ -18,7 +18,7 @@
     "lint:fix": "eslint src --ext .ts --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "docs": "cd docs && mintlify dev --port 3001 --disable-openapi --no-open",
+    "docs": "cd docs && mintlify dev --port 3001",
     "docs:check": "cd docs && mintlify broken-links && mintlify a11y && mintlify validate",
     "db:build:travel": "tsx src/scenarios/travel/scripts/build-db.ts",
     "db:build:currency-rates": "tsx src/scenarios/travel/scripts/build-currency-rates.ts",
