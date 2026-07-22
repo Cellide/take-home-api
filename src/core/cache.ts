@@ -1,16 +1,14 @@
 import NodeCache from 'node-cache';
-import { getEnvBool } from '../config/env.js';
 
 interface CacheConfig {
   stdTTL?: number;
   checkperiod?: number;
 }
 
-// Fixed for the process lifetime: disables reads/writes on every cache-backed controller
-// from this one chokepoint, rather than each controller needing its own check. `npm run dev`
-// sets this so responses always reflect the latest generator code; production leaves it off.
-const NO_CACHE = getEnvBool('NO_CACHE', false);
-
+// Always on, in every environment: correctness (e.g. auth's token/session lookups, see
+// core/auth.ts) depends on this cache actually holding what was written to it, so it can't be
+// short-circuited by a dev flag. The `Cache-Control` header some routes send (see
+// travel/v2/routes.ts) is a separate, client/proxy-caching concern — unrelated to this store.
 let cache: NodeCache | null = null;
 
 export function initCache(config: CacheConfig = {}): NodeCache {
@@ -33,12 +31,10 @@ export function cacheKey(namespace: string, ...parts: (string | number)[]): stri
 }
 
 export function getCached<T>(key: string): T | undefined {
-  if (NO_CACHE) return undefined;
   return getCache().get<T>(key);
 }
 
 export function setCached<T>(key: string, value: T, ttl: number = 3600): void {
-  if (NO_CACHE) return;
   getCache().set(key, value, ttl);
 }
 

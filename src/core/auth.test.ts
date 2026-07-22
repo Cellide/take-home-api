@@ -96,21 +96,27 @@ describe('auth', () => {
       await expect(getUserBase(makeUserRequest('not-a-bearer-token'))).rejects.toMatchObject({ status: 401 });
     });
 
-    it('rejects a token that was never issued (not in cache)', async () => {
-      const { signJwt } = await import('./jwt.js');
-      const forged = signJwt({ sub: 'jsmith' }, 3600);
+    it('rejects a token with an invalid signature', async () => {
+      const { access_token: accessToken } = await loginBase(
+        makeLoginRequest({ username: 'jsmith', password: 'tr@veljsmit' }),
+      );
+      const tampered = `${accessToken.slice(0, -4)}xxxx`;
 
-      await expect(getUserBase(makeUserRequest(`Bearer ${forged}`))).rejects.toMatchObject({ status: 401 });
+      await expect(getUserBase(makeUserRequest(`Bearer ${tampered}`))).rejects.toMatchObject({ status: 401 });
     });
 
-    it('rejects a token once it has been evicted from the cache', async () => {
+    // The JWT itself (signature + exp) is the source of truth, not the cache — an otherwise-valid
+    // token must still be accepted even when its cache entry was never written or was evicted.
+    it('accepts a valid token even when the cache has no record of it', async () => {
       const { access_token: accessToken } = await loginBase(
         makeLoginRequest({ username: 'jsmith', password: 'tr@veljsmit' }),
       );
 
-      initCache(); // simulate the token's cache entry expiring/being cleared
+      initCache(); // simulate an evicted cache entry
 
-      await expect(getUserBase(makeUserRequest(`Bearer ${accessToken}`))).rejects.toMatchObject({ status: 401 });
+      const user = await getUserBase(makeUserRequest(`Bearer ${accessToken}`));
+
+      expect(user.username).toBe('jsmith');
     });
   });
 });

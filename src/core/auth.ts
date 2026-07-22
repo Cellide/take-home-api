@@ -98,8 +98,8 @@ export function createAuthController(config: AuthConfig): AuthController {
     }
 
     const accessToken = signJwt({ sub: username }, tokenTtlSeconds);
-    // The cache, not just the JWT signature, is the source of truth for validity: it lets a
-    // token be looked up (and, in principle, revoked) independently of its own exp claim.
+    // Recorded for parity with a real session store (and so an admin surface could list/revoke
+    // active tokens later), but this is *not* what makes the token valid — see getUserBase.
     setCached(cacheKey(namespace, 'auth', 'token', accessToken), username, tokenTtlSeconds);
     getOrCreateUser(username);
 
@@ -112,10 +112,12 @@ export function createAuthController(config: AuthConfig): AuthController {
     const authHeader = request.headers.authorization;
     const token = authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : undefined;
 
+    // Self-contained: signature + exp are all that's needed to trust the token, same as any
+    // real bearer-JWT verification. It must not also require a cache hit (see loginBase).
     const claims = token ? verifyJwt(token) : null;
-    const username = token ? getCached<string>(cacheKey(namespace, 'auth', 'token', token)) : undefined;
+    const username = typeof claims?.sub === 'string' ? claims.sub : undefined;
 
-    if (!claims || !username) {
+    if (!username) {
       logFlow({ reqId: request.id, flow: 'auth-user', step: 'unauthorized', data: { namespace } });
       throw new ApiError(401, 'UNAUTHORIZED', 'Missing or invalid authorization token');
     }
