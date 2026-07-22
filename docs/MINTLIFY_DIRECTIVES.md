@@ -3,6 +3,7 @@
 Update the Mintlify docs in "docs" folder with current explanations.
 
 The docs should have an overall structure:
+
 - Project Home
 - Scenarios
   - Travel

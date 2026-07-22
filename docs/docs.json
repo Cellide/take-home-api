@@ -26,11 +26,7 @@
             "pages": [
               {
                 "group": "Travel",
-                "pages": [
-                  "scenarios/travel/index",
-                  "scenarios/travel/v1",
-                  "scenarios/travel/v2"
-                ]
+                "pages": ["scenarios/travel/index", "scenarios/travel/v1", "scenarios/travel/v2"]
               }
             ]
           }

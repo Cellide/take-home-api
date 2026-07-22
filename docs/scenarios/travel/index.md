@@ -10,6 +10,7 @@ The Travel scenario simulates an airline booking system. It demonstrates key con
 ## Overview
 
 The Travel API allows you to:
+
 - Search for flights between cities
 - View flight details and pricing
 - Make and manage bookings

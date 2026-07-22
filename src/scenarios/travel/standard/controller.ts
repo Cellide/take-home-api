@@ -46,7 +46,13 @@ export interface SearchFlightsBaseResult extends SearchResults<FormattedRoute> {
 // Runs the direct/connecting/time-flow/grouping pipeline for a single from→to/date leg,
 // reusing the per-leg cache. Shared by the outbound search and, in RoundTrip mode, the
 // inbound (return) search — each leg is cached independently since they're different queries.
-async function findRoutesForLeg(from: string, to: string, date: string, reqId: string, leg: 'outbound' | 'inbound'): Promise<Route[]> {
+async function findRoutesForLeg(
+  from: string,
+  to: string,
+  date: string,
+  reqId: string,
+  leg: 'outbound' | 'inbound',
+): Promise<Route[]> {
   logFlow({
     reqId,
     flow: 'flight-search',
@@ -92,7 +98,7 @@ export async function searchFlightsBase(request: SearchFlightsRequest): Promise<
     throw new ApiError(400, 'INVALID_MODE', "mode must be 'OneWay' or 'RoundTrip'");
   }
 
-  const mode: SearchMode = (modeParam === 'roundtrip' ? 'RoundTrip' : 'OneWay');
+  const mode: SearchMode = modeParam === 'roundtrip' ? 'RoundTrip' : 'OneWay';
 
   if (mode === 'RoundTrip' && !returnDate) {
     throw new ApiError(400, 'RETURN_DATE_REQUIRED', 'returnDate is required when mode is RoundTrip');
