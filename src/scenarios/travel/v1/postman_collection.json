@@ -10,10 +10,10 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "http://localhost:3000/health",
+          "raw": "http://localhost:{{port}}/health",
           "protocol": "http",
           "host": ["localhost"],
-          "port": "3000",
+          "port": "{{port}}",
           "path": ["health"]
         }
       },
@@ -25,11 +25,26 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "http://localhost:3000/api/travel/v1/swagger",
+          "raw": "http://localhost:{{port}}/api/travel/v1/swagger",
           "protocol": "http",
           "host": ["localhost"],
-          "port": "3000",
+          "port": "{{port}}",
           "path": ["api", "travel", "v1", "swagger"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Postman",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:{{port}}/api/travel/v1/postman",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "{{port}}",
+          "path": ["api", "travel", "v1", "postman"]
         }
       },
       "response": []
@@ -40,10 +55,10 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "http://localhost:3000/api/travel/v1/airports",
+          "raw": "http://localhost:{{port}}/api/travel/v1/airports",
           "protocol": "http",
           "host": ["localhost"],
-          "port": "3000",
+          "port": "{{port}}",
           "path": ["api", "travel", "v1", "airports"]
         }
       },
@@ -55,10 +70,10 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "http://localhost:3000/api/travel/v1/cities",
+          "raw": "http://localhost:{{port}}/api/travel/v1/cities",
           "protocol": "http",
           "host": ["localhost"],
-          "port": "3000",
+          "port": "{{port}}",
           "path": ["api", "travel", "v1", "cities"]
         }
       },
@@ -70,28 +85,64 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "http://localhost:3000/api/travel/v1/search?from=CNF&to=GRU&departureDate=2026-11-20",
+          "raw": "http://localhost:{{port}}/api/travel/v1/search",
           "protocol": "http",
           "host": ["localhost"],
-          "port": "3000",
+          "port": "{{port}}",
           "path": ["api", "travel", "v1", "search"],
           "query": [
             {
               "key": "from",
-              "value": "CNF"
+              "value": ""
             },
             {
               "key": "to",
-              "value": "GRU"
+              "value": ""
             },
             {
               "key": "departureDate",
-              "value": "2026-11-20"
+              "value": "",
+              "description": "YYYY-MM-DD"
             }
           ]
         }
       },
       "response": []
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "travel_access_token",
+      "value": ""
+    },
+    {
+      "key": "port",
+      "value": "3000",
+      "type": "default"
     }
   ]
 }
