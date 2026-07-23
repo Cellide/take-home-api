@@ -358,6 +358,20 @@ describe('applyAirlineWeighting', () => {
 
     expect(weighted.length).toBeGreaterThan(0);
   });
+
+  it('never empties out a long multi-hop route: VIX->HHN (real path via the MAO->LIS hub-to-hub leg) survives weighting', async () => {
+    const date = '2027-03-15';
+    const sequences = await findConnectingRoutes('VIX', 'HHN', date);
+    expect(sequences.length).toBeGreaterThan(0);
+    expect(sequences.some((seq) => seq.some((f) => f.departure.airport === 'MAO' && f.arrival.airport === 'LIS'))).toBe(
+      true,
+    );
+
+    const timed = await applyTimeFlow(sequences, date);
+    const weighted = await applyAirlineWeighting(timed);
+
+    expect(weighted.length).toBeGreaterThan(0);
+  });
 });
 
 describe('applyNormalization', () => {
