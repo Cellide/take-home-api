@@ -292,93 +292,91 @@ function repeat(n: number, from: string, to: string, airline: string): Flight[][
   return Array.from({ length: n }, () => [leg(from, to, airline)]);
 }
 
-// CDG/LOS/LIS/NBO are real non-regional hubs in travel.sqlite; HIR is a real regional airport.
-// DH/FD/KU/UT (firstClass), EI/RC/AL/BL (businessClass), NA/SN/KI/ZZ/6I/DI (regular) are real
-// fictional-roster airlines with those exact class flags (see FLIGHT_GENERATOR.md Airline
-// Distribution Weighting) — chosen so cut/survive is unambiguous (no count ties at the cap
-// boundary), so this exercises real store lookups without depending on Path Flow's combinatorics.
+// CDG/LOS/GRU/MAO are real non-regional hubs in travel.sqlite; HIR is a real regional airport.
+// DH/FD/KU/UT (firstClass) and EI/RC/AL/BL (businessClass) are real fictional-roster airlines
+// flagged premium (hasFirstClass or hasBusinessClass); NA/SN/KI/ZZ/6I/HJ are real fictional
+// airlines with neither flag — chosen so top/bottom selection is unambiguous (no count ties at
+// the boundary), exercising real store lookups without depending on Path Flow's combinatorics.
 describe('applyAirlineWeighting', () => {
-  it('caps distinct airlines per class, drops the least-represented, and reprieves an edge left with none', async () => {
+  it('trims a hub-to-hub edge over the threshold to top-2 + bottom-2, retaining a premium option', async () => {
     const sequences: Flight[][] = [
-      // firstClass: DH(4) > FD(3) > KU(2) > UT(1) — cap 3, UT is cut.
-      ...repeat(4, 'CDG', 'LOS', 'DH'),
-      ...repeat(3, 'CDG', 'LOS', 'FD'),
-      ...repeat(2, 'CDG', 'LOS', 'KU'),
-      [leg('CDG', 'LOS', 'UT')],
-      // businessClass: EI(4) > RC(3) > AL(2) > BL(1) — cap 3, BL is cut.
+      // CDG->LOS: 7 distinct airlines, desc by count: NA(10) SN(8) KI(6) ZZ(5) EI(4) 6I(2) HJ(1).
+      // top2={NA,SN}, bottom2={6I,HJ} — none premium, so EI (the first premium airline in
+      // descending order) is added back in as a 5th survivor. KI and ZZ are cut.
+      ...repeat(10, 'CDG', 'LOS', 'NA'),
+      ...repeat(8, 'CDG', 'LOS', 'SN'),
+      ...repeat(6, 'CDG', 'LOS', 'KI'),
+      ...repeat(5, 'CDG', 'LOS', 'ZZ'),
       ...repeat(4, 'CDG', 'LOS', 'EI'),
-      ...repeat(3, 'CDG', 'LOS', 'RC'),
-      ...repeat(2, 'CDG', 'LOS', 'AL'),
-      [leg('CDG', 'LOS', 'BL')],
-      // regular: NA(5) > SN(4) > KI(3) > ZZ(2) > 6I(1) = DI(1) — cap 4, the two lowest (6I, DI)
-      // are cut. DI is the *only* airline on LIS->NBO, so it must be reprieved back in there.
-      ...repeat(5, 'CDG', 'LOS', 'NA'),
-      ...repeat(4, 'CDG', 'LOS', 'SN'),
-      ...repeat(3, 'CDG', 'LOS', 'KI'),
-      ...repeat(2, 'CDG', 'LOS', 'ZZ'),
-      [leg('CDG', 'LOS', '6I')],
-      [leg('LIS', 'NBO', 'DI')],
-      // A route with a cut airline (UT) only on its regional leg (HIR->INU) — regional legs
-      // are excluded from tallying/capping, but still enforced on removal ("every leg").
-      [leg('CDG', 'LOS', 'DH'), leg('HIR', 'INU', 'UT')],
-      // Control: same shape, but the regional leg uses a surviving airline — must not be cut.
-      [leg('CDG', 'LOS', 'DH'), leg('HIR', 'INU', 'DH')],
+      ...repeat(2, 'CDG', 'LOS', '6I'),
+      [leg('CDG', 'LOS', 'HJ')],
     ];
 
     const result = await applyAirlineWeighting(sequences);
 
-    // Cut and not reprieved anywhere: gone entirely.
-    expect(usesAirline(result, 'UT')).toBe(false);
-    expect(usesAirline(result, 'BL')).toBe(false);
-    expect(usesAirline(result, '6I')).toBe(false);
-
-    // Cut, but reprieved on its only edge.
-    expect(usesAirline(result, 'DI')).toBe(true);
-
-    // Under-cap survivors untouched.
-    for (const survivor of ['DH', 'FD', 'KU', 'EI', 'RC', 'AL', 'NA', 'SN', 'KI', 'ZZ']) {
+    for (const survivor of ['NA', 'SN', '6I', 'HJ', 'EI']) {
       expect(usesAirline(result, survivor)).toBe(true);
     }
-
-    // A cut airline on a regional leg still disqualifies the whole route ("every leg" rule).
-    expect(result.some((seq) => seq.length === 2 && seq[1].travelInfo.airline === 'UT')).toBe(false);
-    // The equivalent route with a surviving airline on that same regional leg is kept.
-    expect(result.some((seq) => seq.length === 2 && seq[1].travelInfo.airline === 'DH')).toBe(true);
+    for (const cut of ['KI', 'ZZ']) {
+      expect(usesAirline(result, cut)).toBe(false);
+    }
   });
 
-  it('leaves the collection untouched when no class exceeds its cap', async () => {
-    const sequences: Flight[][] = [[leg('CDG', 'LOS', 'DH')], [leg('CDG', 'LOS', 'FD')]];
+  it('leaves a hub-to-hub edge at or under the threshold untouched', async () => {
+    const sequences: Flight[][] = [[leg('GRU', 'MAO', 'DH')], [leg('GRU', 'MAO', 'FD')], [leg('GRU', 'MAO', 'KU')]];
 
     const result = await applyAirlineWeighting(sequences);
 
     expect(result).toEqual(sequences);
   });
+
+  it('never trims connector legs (regional or standard→hub), only hub-to-hub', async () => {
+    // 7 distinct airlines on a regional connector leg — well over the hub-to-hub threshold,
+    // but connector legs are out of scope entirely.
+    const sequences: Flight[][] = [
+      [leg('HIR', 'INU', 'DH')],
+      [leg('HIR', 'INU', 'FD')],
+      [leg('HIR', 'INU', 'KU')],
+      [leg('HIR', 'INU', 'EI')],
+      [leg('HIR', 'INU', 'RC')],
+      [leg('HIR', 'INU', 'NA')],
+      [leg('HIR', 'INU', 'SN')],
+    ];
+
+    const result = await applyAirlineWeighting(sequences);
+
+    expect(result).toEqual(sequences);
+  });
+
+  it('never empties out a long multi-hop route: VIX->UBN (real 5-hub-leg path) survives weighting', async () => {
+    const date = '2027-03-15';
+    const sequences = await findConnectingRoutes('VIX', 'UBN', date);
+    expect(sequences.length).toBeGreaterThan(0);
+
+    const timed = await applyTimeFlow(sequences, date);
+    const weighted = await applyAirlineWeighting(timed);
+
+    expect(weighted.length).toBeGreaterThan(0);
+  });
 });
 
 describe('applyNormalization', () => {
-  it('skips airline weighting entirely for direct-regional route sets', async () => {
-    // 4 distinct firstClass airlines on one edge — would be cut down to 3 by applyAirlineWeighting.
-    const sequences: Flight[][] = [
-      [leg('CDG', 'LOS', 'DH')],
-      [leg('CDG', 'LOS', 'FD')],
-      [leg('CDG', 'LOS', 'KU')],
-      [leg('CDG', 'LOS', 'UT')],
-    ];
-
-    const result = await applyNormalization(sequences, true);
-
-    expect(result).toHaveLength(4);
-    expect(usesAirline(result, 'UT')).toBe(true);
-  });
-
   it('samples down to MAX_PRESENTED_ROUTES (50) when the (already-weighted) collection is larger', async () => {
-    const sequences: Flight[][] = Array.from({ length: 60 }, () => [leg('CDG', 'LOS', 'NA')]);
+    const sequences: Flight[][] = Array.from({ length: 60 }, () => [leg('GRU', 'MAO', 'NA')]);
 
-    const result = await applyNormalization(sequences, false);
+    const result = await applyNormalization(sequences);
 
     expect(result).toHaveLength(50);
     for (const seq of result) {
       expect(sequences).toContain(seq);
     }
+  });
+
+  it('leaves collections at or under the limit untouched', async () => {
+    const sequences: Flight[][] = [[leg('GRU', 'MAO', 'NA')], [leg('GRU', 'MAO', 'SN')]];
+
+    const result = await applyNormalization(sequences);
+
+    expect(result).toEqual(sequences);
   });
 });

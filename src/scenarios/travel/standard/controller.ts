@@ -76,7 +76,7 @@ async function findRoutesForLeg(
     const sequences: Flight[][] =
       direct.length > 0 ? direct.map((f) => [f]) : await findConnectingRoutes(from, to, date);
     const timed = await applyTimeFlow(sequences, date);
-    const normalized = await applyNormalization(timed, direct.length > 0);
+    const normalized = await applyNormalization(timed);
     const generated = groupRoutes(normalized);
     setCached(cacheKeyVal, generated, CACHE_TTL);
 
