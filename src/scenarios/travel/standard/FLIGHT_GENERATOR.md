@@ -131,7 +131,6 @@ Each Flight is assigned an aircraft from the `aircraft` reference table (see TRA
 
 ## Seat Offering
 
-Each Flight is assigned an `available` seat count and a set of cabin classes it sells, both derived at generation time (`makeFlight()`):
 
 - `available` is a random integer in `[10, aircraft.capacity]` — bounded above by the chosen aircraft's capacity, but not fixed to it, so identical aircraft don't always report a full plane.
 - Cabin classes come from `pickSeatClasses(airline)`: `regular` is always offered; if the airline has `hasEconomyClass`, `economy` is added; `businessClass` and `firstClass` are added individually per the airline's corresponding flags. `SeatClass` is `'regular' | 'economy' | 'businessClass' | 'firstClass'`.
@@ -157,3 +156,5 @@ Route-level aggregation (the numbers described in "Route Normalization" above �
 - **Per-class seat pool splitting**: as noted in Seat Offering, every cabin class on a Flight currently shares the same `available` count instead of each class holding a realistic fraction of it.
 
 There is no dedicated `normalize()` function or file — this is the one stage in the pipeline with no implementation to point to yet.
+
+Each Flight is assigned an `available` seat count and a set of cabin classes it sells, both derived at generation time (`makeFlight()`):
