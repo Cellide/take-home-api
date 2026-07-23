@@ -55,6 +55,11 @@ interface AircraftRow {
   capacity: number;
 }
 
+interface CurrencyRateRow {
+  currencyCode: string;
+  rateUsd: number;
+}
+
 // Minimal RFC4180-ish CSV parser: handles quoted fields with embedded commas.
 function parseCsv(filePath: string): string[][] {
   const content = fs.readFileSync(filePath, 'utf-8').replace(/\r\n/g, '\n').trim();
@@ -119,6 +124,14 @@ function parseAircraft(filePath: string): AircraftRow[] {
     model: r[1],
     type: r[2] as AircraftRow['type'],
     capacity: Number(r[3]),
+  }));
+}
+
+function parseCurrencyRates(filePath: string): CurrencyRateRow[] {
+  const [, ...rows] = parseCsv(filePath);
+  return rows.map((r) => ({
+    currencyCode: r[0],
+    rateUsd: Number(r[1]),
   }));
 }
 
@@ -543,6 +556,7 @@ async function buildDb(): Promise<void> {
   const fictionalAirlines = parseAirlines(path.join(TRAVEL_DIR, 'fictional_airlines.csv'));
   const realAirlines = parseAirlines(path.join(TRAVEL_DIR, 'real_airlines.csv'));
   const aircraft = parseAircraft(path.join(TRAVEL_DIR, 'aircraft.csv'));
+  const currencyRates = parseCurrencyRates(path.join(TRAVEL_DIR, 'currency_rates.csv'));
 
   await dropDatabase(DB_NAME);
   const dbPath = path.join(TRAVEL_DIR, `${DB_NAME}.sqlite`);
@@ -601,6 +615,11 @@ async function buildDb(): Promise<void> {
             capacity INTEGER NOT NULL
         );
         CREATE INDEX idx_aircraft_type ON aircraft (type);
+
+        CREATE TABLE currency_rates (
+            currency_code TEXT PRIMARY KEY,
+            rate_usd REAL NOT NULL
+        );
     `);
 
   const insertAirport = db.prepare(`
@@ -675,6 +694,18 @@ async function buildDb(): Promise<void> {
   }
   insertAircraft.free();
 
+  const insertCurrencyRate = db.prepare(`
+        INSERT INTO currency_rates (currency_code, rate_usd)
+        VALUES (:currency_code, :rate_usd)
+    `);
+  for (const rate of currencyRates) {
+    insertCurrencyRate.run({
+      ':currency_code': rate.currencyCode,
+      ':rate_usd': rate.rateUsd,
+    });
+  }
+  insertCurrencyRate.free();
+
   linkAirportsToAirlines(db, airports, fictionalAirlines, realAirlines);
 
   await saveDatabase(TRAVEL_DIR, DB_NAME);
@@ -684,6 +715,7 @@ async function buildDb(): Promise<void> {
   console.log(`  airports: ${airports.length}`);
   console.log(`  airlines: ${fictionalAirlines.length} fictional + ${realAirlines.length} real`);
   console.log(`  aircraft: ${aircraft.length}`);
+  console.log(`  currency_rates: ${currencyRates.length}`);
   console.log(`  airport_airlines: possible airline flights between airports`);
   console.log(`  isolated airports (no flights): ${airports.filter((a) => a.isolated).length}`);
   console.log(`  regional airports (few airlines): ${airports.filter((a) => a.regional).length}`);

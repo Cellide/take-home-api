@@ -42,20 +42,14 @@ The fallback rates are reasonable approximations based on typical market rates:
 
 ### Usage in Code
 
-To use currency rates in the API:
+The CSV is build-time-only source data. `npm run db:build:travel` (see `build-db.ts`) loads it into a `currency_rates` table in `travel.sqlite` alongside airports/airlines/aircraft. Runtime code never reads the CSV directly — it queries the table, the same way `store.ts` queries every other table:
 
 ```typescript
-// Load rates from CSV
-const rates = parseCSV('currency_rates.csv');
-
-// Get rate for a currency
-const eurToUsd = rates['EUR']; // 0.92
-const usdToEur = 1 / rates['EUR']; // 1.087
-
-// Convert prices
-const priceInUsd = 100;
-const priceInEur = priceInUsd / rates['EUR']; // 91.3 EUR
+// src/scenarios/travel/standard/currency.ts
+const priceInEur = await convertFromUsd(100, 'EUR');
 ```
+
+Regenerating `currency_rates.csv` via `npm run db:build:currency-rates` only refreshes the committed source data — rebuild the DB afterwards (`npm run db:build:travel`) to pick up the new rates.
 
 ## Notes
 
