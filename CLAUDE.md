@@ -209,9 +209,10 @@ src/
 1. Use TypeScript for type safety
 2. Run linter frequently to catch issues early
 3. Write tests for new features
-4. Use meaningful commit messages
-5. Update semver tag when a commit or merge is made
-  1. Don't do MAJOR updates without confirmation
+4. Use [Conventional Commits](https://www.conventionalcommits.org/) (`fix:`, `feat:`, `feat!:`/`BREAKING CHANGE:`) so semver tags can be derived automatically
+5. Versioning and tagging are automated by [release-please](https://github.com/googleapis/release-please) (`.github/workflows/release-please.yml`): it keeps a release PR up to date with the version bump and changelog inferred from commits since the last tag
+   1. Merging that PR is what cuts the git tag/GitHub release and bumps `package.json` — this merge is the confirmation step, so MAJOR (and any other) bumps are never applied without a human merging the PR
+   2. Don't hand-edit `package.json`'s `version` or `.release-please-manifest.json` outside of that merge flow
 6. The user will review committed code
 
 ### Before Committing

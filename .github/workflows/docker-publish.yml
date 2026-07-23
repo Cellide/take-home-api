@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'
 
 jobs:
   build-and-push:
@@ -21,11 +23,25 @@ jobs:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Determine tags
+        id: tags
+        shell: bash
+        run: |
+          IMAGE="fernandopj/take-home-api"
+          TAGS="$IMAGE:${{ github.sha }}"$'\n'"$IMAGE:latest"
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+            TAGS="$TAGS"$'\n'"$IMAGE:$VERSION"
+          fi
+          {
+            echo "tags<<EOF"
+            echo "$TAGS"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: |
-            fernandopj/take-home-api:${{ github.sha }}
-            fernandopj/take-home-api:latest
+          tags: ${{ steps.tags.outputs.tags }}
