@@ -5,6 +5,7 @@ import {
   baseFlightDetailSchema,
   baseListAirportsSchema,
   baseListCitiesSchema,
+  omitSchemaFields,
 } from '../standard/openapi.js';
 import { v1AirportSchema } from './openapi.js';
 import {
@@ -19,7 +20,15 @@ import { servePostmanCollection } from '../../../utils/postman-handler.js';
 
 // v1 schemas are the shared base as-is today; spread/override here if this
 // version ever needs route-specific validation or response tweaks.
-const searchFlightsSchema = { ...baseSearchFlightsSchema };
+const searchFlightsSchema = {
+  ...baseSearchFlightsSchema,
+  response: {
+    200: {
+      ...baseSearchFlightsSchema.response[200],
+      properties: omitSchemaFields(baseSearchFlightsSchema.response[200], ['mode']).properties,
+    },
+  },
+};
 const flightDetailSchema = { ...baseFlightDetailSchema };
 // v1 airports drop icao/utcOffset, so the response schema swaps in the trimmed item schema.
 const listAirportsSchema = {

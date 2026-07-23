@@ -6,6 +6,8 @@ Each scenario models a realistic business domain — e-commerce, airline booking
 
 Every scenario goes from /api/v1 with simple definitions and endpoints, up to /api/v4 with harder constraints, complex schemas and stricter flows. Use a version better suited for your intended usage.
 
+Doesn't need other containers to run. Uses SQLite and in-memory storage.
+
 ## Why
 
 Most "coding challenge" and "system design" tools ask you to build a backend from scratch. This one flips that: the API already exists, fully working, and you learn by **using** it.
@@ -55,8 +57,8 @@ Every scenario ships with an OpenAPI/Swagger spec and a set of static reference 
 You can run the API via docker image locally:
 
 ```bash
-docker build . <image>
-docker run <image>
+docker build -t th-api .
+docker run -d --name take-home-api -p 3000:3000 th-api
 ```
 
 *(image name and instructions to be added once published to Docker Hub).*
