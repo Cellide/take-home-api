@@ -1,4 +1,11 @@
-import { findDirectFlights, findConnectingRoutes, applyTimeFlow, groupRoutes } from './generator.js';
+import {
+  findDirectFlights,
+  findConnectingRoutes,
+  applyTimeFlow,
+  applyAirlineWeighting,
+  applyNormalization,
+  groupRoutes,
+} from './generator.js';
 import type { Flight, Route } from './types.js';
 
 // Parses generator.ts's "YYYY-MM-DD HH:MM UTC+/-N" timestamp format (see formatLocalTimestamp)
@@ -268,5 +275,201 @@ describe('applyTimeFlow ordering', () => {
     // The shared instance must be timestamped exactly once, not re-derived per sequence.
     expect(timedA[0]).toBe(timedB[0]);
     expect(timedA[0].departure.timestamp).toBe(timedB[0].departure.timestamp);
+  });
+});
+
+function leg(from: string, to: string, airline: string): Flight {
+  return makeRawLeg(from, to, { travelInfo: { airline, aircraft: 'Test Plane', flightNumber: `${airline} 0001` } });
+}
+
+function usesAirline(sequences: Flight[][], airline: string): boolean {
+  return sequences.some((seq) => seq.some((f) => f.travelInfo.airline === airline));
+}
+
+// Array(n).fill([...]) would alias the same inner array across every slot — each route needs
+// its own distinct sequence.
+function repeat(n: number, from: string, to: string, airline: string): Flight[][] {
+  return Array.from({ length: n }, () => [leg(from, to, airline)]);
+}
+
+// CDG/LOS/GRU/MAO are real non-regional hubs in travel.sqlite; HIR is a real regional airport.
+// DH/FD/KU/UT (firstClass) and EI/RC/AL/BL (businessClass) are real fictional-roster airlines
+// flagged premium (hasFirstClass or hasBusinessClass) but still mixed-cabin (they also sell
+// regular seats); NA/SN/KI/ZZ/6I/MB/DI/HJ are real fictional airlines with no premium flag at
+// all — chosen so top/bottom selection is unambiguous (no count ties at the boundary),
+// exercising real store lookups without depending on Path Flow's combinatorics. NV is the
+// roster's real premium-only carrier (no regular/economy tier — see isPremiumOnly).
+describe('applyAirlineWeighting', () => {
+  it('trims a hub-to-hub edge over the threshold to top-3 + bottom-3, retaining a premium option', async () => {
+    const sequences: Flight[][] = [
+      // CDG->LOS: 8 distinct airlines, desc by count: NA(10) SN(8) KI(6) ZZ(5) EI(4) MB(3) 6I(2) HJ(1).
+      // top3={NA,SN,KI}, bottom3={MB,6I,HJ} — none premium, so EI (the first premium airline in
+      // descending order among those cut) is added back in as a 7th survivor. Only ZZ is cut.
+      ...repeat(10, 'CDG', 'LOS', 'NA'),
+      ...repeat(8, 'CDG', 'LOS', 'SN'),
+      ...repeat(6, 'CDG', 'LOS', 'KI'),
+      ...repeat(5, 'CDG', 'LOS', 'ZZ'),
+      ...repeat(4, 'CDG', 'LOS', 'EI'),
+      ...repeat(3, 'CDG', 'LOS', 'MB'),
+      ...repeat(2, 'CDG', 'LOS', '6I'),
+      [leg('CDG', 'LOS', 'HJ')],
+    ];
+
+    const result = await applyAirlineWeighting(sequences);
+
+    for (const survivor of ['NA', 'SN', 'KI', 'MB', '6I', 'HJ', 'EI']) {
+      expect(usesAirline(result, survivor)).toBe(true);
+    }
+    expect(usesAirline(result, 'ZZ')).toBe(false);
+  });
+
+  it('always retains a premium-only carrier (e.g. NV) on a trimmed edge, even outside the top/bottom cut', async () => {
+    const sequences: Flight[][] = [
+      // CDG->LOS: 8 distinct airlines; NV sits squarely in the middle of the pack (would
+      // otherwise be cut), but premium-only carriers always survive this stage regardless.
+      ...repeat(10, 'CDG', 'LOS', 'NA'),
+      ...repeat(8, 'CDG', 'LOS', 'SN'),
+      ...repeat(6, 'CDG', 'LOS', 'KI'),
+      ...repeat(5, 'CDG', 'LOS', 'ZZ'),
+      ...repeat(4, 'CDG', 'LOS', 'NV'),
+      ...repeat(3, 'CDG', 'LOS', 'MB'),
+      ...repeat(2, 'CDG', 'LOS', '6I'),
+      [leg('CDG', 'LOS', 'HJ')],
+    ];
+
+    const result = await applyAirlineWeighting(sequences);
+
+    expect(usesAirline(result, 'NV')).toBe(true);
+  });
+
+  it('leaves a hub-to-hub edge at or under the threshold untouched', async () => {
+    const sequences: Flight[][] = [[leg('GRU', 'MAO', 'DH')], [leg('GRU', 'MAO', 'FD')], [leg('GRU', 'MAO', 'KU')]];
+
+    const result = await applyAirlineWeighting(sequences);
+
+    expect(result).toEqual(sequences);
+  });
+
+  it('never trims connector legs (regional or standard→hub), only hub-to-hub', async () => {
+    // 7 distinct airlines on a regional connector leg — well over the hub-to-hub threshold,
+    // but connector legs are out of scope entirely.
+    const sequences: Flight[][] = [
+      [leg('HIR', 'INU', 'DH')],
+      [leg('HIR', 'INU', 'FD')],
+      [leg('HIR', 'INU', 'KU')],
+      [leg('HIR', 'INU', 'EI')],
+      [leg('HIR', 'INU', 'RC')],
+      [leg('HIR', 'INU', 'NA')],
+      [leg('HIR', 'INU', 'SN')],
+    ];
+
+    const result = await applyAirlineWeighting(sequences);
+
+    expect(result).toEqual(sequences);
+  });
+
+  it('never empties out a long multi-hop route: VIX->UBN (real 5-hub-leg path) survives weighting', async () => {
+    const date = '2027-03-15';
+    const sequences = await findConnectingRoutes('VIX', 'UBN', date);
+    expect(sequences.length).toBeGreaterThan(0);
+
+    const timed = await applyTimeFlow(sequences, date);
+    const weighted = await applyAirlineWeighting(timed);
+
+    expect(weighted.length).toBeGreaterThan(0);
+  });
+
+  it('never empties out a long multi-hop route: VIX->HHN (real path via the MAO->LIS hub-to-hub leg) survives weighting', async () => {
+    const date = '2027-03-15';
+    const sequences = await findConnectingRoutes('VIX', 'HHN', date);
+    expect(sequences.length).toBeGreaterThan(0);
+    expect(sequences.some((seq) => seq.some((f) => f.departure.airport === 'MAO' && f.arrival.airport === 'LIS'))).toBe(
+      true,
+    );
+
+    const timed = await applyTimeFlow(sequences, date);
+    const weighted = await applyAirlineWeighting(timed);
+
+    expect(weighted.length).toBeGreaterThan(0);
+  });
+});
+
+describe('applyNormalization', () => {
+  it('samples down to MAX_PRESENTED_ROUTES (50) when the (already-weighted) collection is larger', async () => {
+    const sequences: Flight[][] = Array.from({ length: 60 }, () => [leg('GRU', 'MAO', 'NA')]);
+
+    const result = await applyNormalization(sequences);
+
+    expect(result).toHaveLength(50);
+    for (const seq of result) {
+      expect(sequences).toContain(seq);
+    }
+  });
+
+  it('leaves collections at or under the limit untouched', async () => {
+    const sequences: Flight[][] = [[leg('GRU', 'MAO', 'NA')], [leg('GRU', 'MAO', 'SN')]];
+
+    const result = await applyNormalization(sequences);
+
+    expect(result).toEqual(sequences);
+  });
+});
+
+// NV (Navegantes Aéreos) / B0 (La Compagnie) are premium-only special cases: excluded from every
+// standard airport_airlines stage and instead linked directly to just LIS/CDG/IST (see
+// build-db.ts's Stage 5). They carry no `regular` flag, so pickSeatClasses never offers a
+// 'regular' tier for them; and since they're never linked domestically, geographic proximity
+// alone (e.g. ORY sharing France with B0) must not surface them either.
+describe('NV/B0 premium-only exemption (regression)', () => {
+  const date = '2027-03-15';
+
+  it('never generates regular-tier pricing for an NV/B0 leg', async () => {
+    const lisHam = await findConnectingRoutes('LIS', 'HAM', date);
+    const exemptLegs = lisHam
+      .flatMap((seq) => seq)
+      .filter((f) => f.travelInfo.airline === 'NV' || f.travelInfo.airline === 'B0');
+
+    expect(exemptLegs.length).toBeGreaterThan(0);
+    for (const flight of exemptLegs) {
+      for (const entry of flight.pricing) {
+        expect(entry.regular).toBeUndefined();
+      }
+    }
+  });
+
+  it('does not surface NV/B0 for ORY->CDG, despite B0 sharing France with ORY (not a domestic edge)', async () => {
+    const sequences = await findConnectingRoutes('ORY', 'CDG', date);
+
+    expect(usesAirline(sequences, 'NV')).toBe(false);
+    expect(usesAirline(sequences, 'B0')).toBe(false);
+  });
+
+  it('surfaces NV/B0 on at least one leg for LIS->HAM (LIS is one of their fixed hubs)', async () => {
+    const sequences = await findConnectingRoutes('LIS', 'HAM', date);
+
+    expect(usesAirline(sequences, 'NV') || usesAirline(sequences, 'B0')).toBe(true);
+  });
+});
+
+// TAK-33 regression: an airline can hold a regional=1 airport_airlines edge at two airports for
+// unrelated reasons (e.g. a domestic edge at its own hub, plus a separate hub-feeder edge at some
+// other regular airport near a different hub it happens to reach) without ever flying between
+// those two airports directly. findDirectFlights must not compose those two edges into an
+// implausible long-haul "direct" flight just because the same airline shows up at both ends —
+// e.g. LIS (TP's home hub) and SVX (~5300km away, a TAP Air Portugal regional edge inherited only
+// via IST's hub-feeder extension) previously surfaced as a bogus direct route.
+describe('findDirectFlights distance guard (regression)', () => {
+  const date = '2027-03-15';
+
+  it('does not surface a direct flight for LIS->SVX despite both sharing a regional-edge airline', async () => {
+    const direct = await findDirectFlights('LIS', 'SVX', date);
+
+    expect(direct).toHaveLength(0);
+  });
+
+  it('still finds LIS->SVX via a hub connection instead', async () => {
+    const sequences = await findConnectingRoutes('LIS', 'SVX', date);
+
+    expect(sequences.length).toBeGreaterThan(0);
   });
 });

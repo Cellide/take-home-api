@@ -71,8 +71,8 @@ function makeFlightNumber(airlineIata: string): string {
 }
 
 // One seat class per FlightPricing object — mutually exclusive by design (see FlightPricing
-// type). An airline that doesn't segment cabins (no economy/business/first flags) sells a single
-// undifferentiated "regular" class instead.
+// type). Which classes an airline sells is driven entirely by its regular/economy/business/first
+// flags (see pickSeatClasses) — including premium-only carriers with no regular flag.
 type SeatClass = 'regular' | 'economy' | 'businessClass' | 'firstClass';
 
 // Premium classes cost more per km, economy undercuts regular; see classBasePriceUsd below.
@@ -83,14 +83,13 @@ const SEAT_CLASS_PRICE_MULTIPLIER: Record<SeatClass, number> = {
   firstClass: 4.5,
 };
 
-// `regular` is a baseline every airline serves, alongside whichever premium tiers it's flagged
-// for. An airline serving business/first also serves regular (there's no premium-only carrier);
-// an airline serving economy serves only economy+regular (no premium tiers). Only four combos
-// are possible: R, E+R, R+B, R+B+F.
+// `regular` is offered whenever an airline is flagged for it, alongside whichever premium tiers
+// it's flagged for — a premium-only carrier (no regular flag) sells just business/first.
 function pickSeatClasses(airline: Airline): SeatClass[] {
   if (airline.hasEconomyClass) return ['regular', 'economy'];
 
-  const classes: SeatClass[] = ['regular'];
+  const classes: SeatClass[] = [];
+  if (airline.hasRegularClass) classes.push('regular');
   if (airline.hasBusinessClass) classes.push('businessClass');
   if (airline.hasFirstClass) classes.push('firstClass');
   return classes;
@@ -213,6 +212,15 @@ async function getOrMakeFlight(
   return flight;
 }
 
+// A regional edge only ever represents a domestic or hub-feeder short-hop (build-db.ts Stages
+// 1/3) — never a deliberate point-to-point link between the two specific airports being
+// queried. Two airports can each separately hold a regional=1 edge for the same airline (e.g.
+// TP domestically at its LIS hub, and TP again at some unrelated airport near a different hub
+// it happens to reach) without that airline ever flying between the two directly. Cap "direct"
+// eligibility at the same short-hop range build-db.ts already treats as plausible for a regional
+// connection, so those two unrelated edges can't compose into an implausible long-haul "direct".
+const MAX_DIRECT_REGIONAL_KM = 3500;
+
 // `count` will gate how many routes are returned once multi-route/layover logic lands.
 export async function findDirectFlights(
   from: string,
@@ -222,15 +230,17 @@ export async function findDirectFlights(
 ): Promise<Flight[]> {
   faker.seed(hashFlightQuery(from, to, date));
 
-  // First pass: only path resolution. A direct flight is possible whenever an airline
-  // holds a regional airport_airlines edge at both `from` and `to`; one Flight per airline.
-  const [fromAirport, toAirport, regionalAirlines, aircraftList] = await Promise.all([
+  const [fromAirport, toAirport, aircraftList] = await Promise.all([
     store.getAirport(from),
     store.getAirport(to),
-    store.getRegionalAirlines(from, to),
     store.getAircraft(),
   ]);
   if (!fromAirport || !toAirport) return [];
+  if (haversineKm(fromAirport, toAirport) > MAX_DIRECT_REGIONAL_KM) return [];
+
+  // A direct flight is possible whenever an airline holds a regional airport_airlines edge at
+  // both `from` and `to`; one Flight per airline.
+  const regionalAirlines = await store.getRegionalAirlines(from, to);
 
   return Promise.all(
     regionalAirlines.map((airline) => makeFlight(fromAirport, toAirport, date, airline, aircraftList)),
@@ -498,6 +508,18 @@ function departureWindow(date: string, utcOffset: number, now: number): { start:
   return { start: Math.max(fiveAm, sixHoursFromNow), end: nextMidnight };
 }
 
+// Shared by applyTimeFlow and applyAirlineWeighting — both need repeated Airport lookups
+// (by IATA) for the same handful of airports across many legs.
+function makeAirportLookup(): (iata: string) => Promise<Airport | undefined> {
+  const cache = new Map<string, Airport | undefined>();
+  return async (iata: string): Promise<Airport | undefined> => {
+    if (!cache.has(iata)) {
+      cache.set(iata, await store.getAirport(iata));
+    }
+    return cache.get(iata);
+  };
+}
+
 function formatLocalTimestamp(utcMillis: number, utcOffset: number): string {
   const local = new Date(utcMillis + utcOffset * 3600_000);
   const offsetSign = utcOffset >= 0 ? '+' : '-';
@@ -527,13 +549,7 @@ function formatLocalTimestamp(utcMillis: number, utcOffset: number): string {
 // therefore distributed across the distinct *first* Flight instances, not one slot per Route.
 export async function applyTimeFlow(sequences: Flight[][], date: string): Promise<Flight[][]> {
   const now = Date.now();
-  const airportCache = new Map<string, Airport | undefined>();
-  const getAirport = async (iata: string): Promise<Airport | undefined> => {
-    if (!airportCache.has(iata)) {
-      airportCache.set(iata, await store.getAirport(iata));
-    }
-    return airportCache.get(iata);
-  };
+  const getAirport = makeAirportLookup();
 
   const timestamped = new Map<Flight, { departureInstant: number; arrivalInstant: number }>();
 
@@ -594,6 +610,124 @@ export async function applyTimeFlow(sequences: Flight[][], date: string): Promis
   }
 
   return sequences;
+}
+
+function edgeKey(leg: Flight): string {
+  return `${leg.departure.airport}|${leg.arrival.airport}`;
+}
+
+// Only hub-to-hub legs are weighted — connector legs (regional or standard→hub) are left
+// untouched entirely, their airline pool is already small (see reduceToHub).
+async function isHubToHubLeg(
+  leg: Flight,
+  getAirport: (iata: string) => Promise<Airport | undefined>,
+): Promise<boolean> {
+  const [from, to] = await Promise.all([getAirport(leg.departure.airport), getAirport(leg.arrival.airport)]);
+  return Boolean(from?.isHub && to?.isHub);
+}
+
+function isPremium(airline: Airline | undefined): boolean {
+  return Boolean(airline?.hasFirstClass || airline?.hasBusinessClass);
+}
+
+// Premium-only carriers (no regular/economy tier at all — see pickSeatClasses) are rare and
+// educational by design (e.g. NV/B0's fixed-hub exemption in build-db.ts) — this trim must never
+// be the reason one goes missing from a hub-to-hub edge it's actually on. Distinct from
+// isPremium: a mixed carrier like TP sells regular seats too and doesn't need this guarantee,
+// only ones that sell nothing but premium do.
+function isPremiumOnly(airline: Airline | undefined): boolean {
+  return Boolean(airline && !airline.hasEconomyClass && !airline.hasRegularClass && isPremium(airline));
+}
+
+// Trimming is decided independently per hub-to-hub edge (one from→to pair), never across the
+// whole route collection — this is what keeps a long multi-hop route viable: each of its legs
+// gets its own survivor budget instead of every leg competing for one shared, collection-wide
+// cap (which could empty out a route with many legs even though each individual leg still had
+// plenty of options).
+const HUB_EDGE_TRIM_THRESHOLD = 5;
+const HUB_EDGE_KEEP_TOP = 3;
+const HUB_EDGE_KEEP_BOTTOM = 3;
+
+// Per hub-to-hub edge with more than HUB_EDGE_TRIM_THRESHOLD distinct airlines, keep only the
+// top 3 by route-representation and the bottom 3 (a few dominant carriers, a few long-tail ones —
+// deliberately not a smooth middle) — always at least 6 survivors when trimming happens at all,
+// so a leg is never emptied out. Two retention passes run after that cut: (1) if none of the 6
+// kept airlines offers a premium cabin (first or business) but the edge has one available among
+// the ones just cut, it's added back in as a 7th survivor, so premium options aren't accidentally
+// erased entirely; (2) every premium-only carrier (see isPremiumOnly) present on the edge is
+// added back in regardless of whether it made the top/bottom cut or pass (1)'s reprieve — unlike
+// a merely premium but mixed-cabin carrier, these are rare/educational by design and this stage
+// must never be the reason one disappears. (A later stage, applyNormalization's presented-size
+// cap, can still legitimately drop one — that's fine, this guarantee is scoped to this trim only.)
+// Edges at or under the threshold are left untouched. Any Route with a leg that lost its airline
+// on this pass is dropped.
+export async function applyAirlineWeighting(sequences: Flight[][]): Promise<Flight[][]> {
+  if (sequences.length === 0) return sequences;
+
+  const getAirport = makeAirportLookup();
+  const airlineByIata = new Map((await store.getAllAirlines()).map((a) => [a.iata, a]));
+
+  const edgeAirlineCounts = new Map<string, Map<string, number>>();
+  for (const sequence of sequences) {
+    for (const leg of sequence) {
+      if (!(await isHubToHubLeg(leg, getAirport))) continue;
+      const key = edgeKey(leg);
+      const counts = edgeAirlineCounts.get(key) ?? new Map<string, number>();
+      counts.set(leg.travelInfo.airline, (counts.get(leg.travelInfo.airline) ?? 0) + 1);
+      edgeAirlineCounts.set(key, counts);
+    }
+  }
+  if (edgeAirlineCounts.size === 0) return sequences;
+
+  const survivorsPerEdge = new Map<string, Set<string>>();
+  for (const [key, counts] of edgeAirlineCounts) {
+    const airlines = [...counts.keys()];
+    if (airlines.length <= HUB_EDGE_TRIM_THRESHOLD) {
+      survivorsPerEdge.set(key, new Set(airlines));
+      continue;
+    }
+
+    const sortedDesc = faker.helpers.shuffle(airlines).sort((a, b) => counts.get(b)! - counts.get(a)!);
+    const survivors = new Set([...sortedDesc.slice(0, HUB_EDGE_KEEP_TOP), ...sortedDesc.slice(-HUB_EDGE_KEEP_BOTTOM)]);
+
+    if (![...survivors].some((iata) => isPremium(airlineByIata.get(iata)))) {
+      const premiumCandidate = sortedDesc.find((iata) => isPremium(airlineByIata.get(iata)));
+      if (premiumCandidate) survivors.add(premiumCandidate);
+    }
+
+    for (const iata of airlines) {
+      if (isPremiumOnly(airlineByIata.get(iata))) survivors.add(iata);
+    }
+
+    survivorsPerEdge.set(key, survivors);
+  }
+
+  return sequences.filter((sequence) =>
+    sequence.every((leg) => {
+      const survivors = survivorsPerEdge.get(edgeKey(leg));
+      return !survivors || survivors.has(leg.travelInfo.airline);
+    }),
+  );
+}
+
+// FLIGHT_GENERATOR.md Normalization: Route Collection Trimming. MAX_ROUTES (Path Flow) is only
+// a hard safety cap on generation, not a realistic result-set size. Sampled uniformly at random
+// rather than by any ranking, so surviving departures (already spread out by Time Flow) keep an
+// uneven scatter across the window as a side effect, instead of the artificial clustering a
+// "keep the first/earliest N" trim would produce.
+const MAX_PRESENTED_ROUTES = 50;
+
+function trimToPresentedLimit(sequences: Flight[][]): Flight[][] {
+  if (sequences.length <= MAX_PRESENTED_ROUTES) return sequences;
+  return faker.helpers.shuffle(sequences).slice(0, MAX_PRESENTED_ROUTES);
+}
+
+// Normalization entry point, run on the Time Flow output before groupRoutes: weight airline
+// distribution (a no-op when the collection has no hub-to-hub legs at all, e.g. direct-regional
+// route sets — see applyAirlineWeighting), then trim to a presentable collection size.
+export async function applyNormalization(sequences: Flight[][]): Promise<Flight[][]> {
+  const weighted = await applyAirlineWeighting(sequences);
+  return trimToPresentedLimit(weighted);
 }
 
 // Route-level pricing collapses each leg's cheapest fare — regular or economy, premium cabins
