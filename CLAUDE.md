@@ -193,7 +193,8 @@ src/
 - Store sensitive data securely (environment variables)
 - Use Content Security Policy (CSP) headers
 - Use CORS headers
-- Don't use `awk -F,` for CSV splitting, it introduces bugs from commas, quotes strings
+- Don't use `awk -F,` for CSV splitting, it introduces bugs from commas, quotes strings.
+  - Use the `build-db.ts` function `parseCsv()` which handles those cases.
 
 ## Development Workflow
 

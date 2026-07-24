@@ -711,7 +711,11 @@ async function buildDb(): Promise<void> {
   }
   insertCurrencyRate.free();
 
-  linkAirportsToAirlines(db, airports, fictionalAirlines, realAirlines);
+  // Navegantes Aéreos / La Compagnie are premium-only special cases (no regular seats) that get
+  // their own airport association logic in a later task — exempt them from every standard stage.
+  const standardFictionalAirlines = fictionalAirlines.filter((a) => a.iata !== 'NV');
+  const standardRealAirlines = realAirlines.filter((a) => a.iata !== 'B0');
+  linkAirportsToAirlines(db, airports, standardFictionalAirlines, standardRealAirlines);
 
   await saveDatabase(TRAVEL_DIR, DB_NAME);
   await dropDatabase(DB_NAME);
